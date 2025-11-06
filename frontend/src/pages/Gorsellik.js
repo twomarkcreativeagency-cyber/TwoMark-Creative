@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -8,101 +9,124 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
 import { toast } from 'sonner';
-import { Upload, Palette, Eye, Save } from 'lucide-react';
+import { Upload, Save, Image as ImageIcon, Palette } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const Gorsellik = () => {
   const { t } = useLanguage();
-  const { theme, updateTheme, applyTheme } = useTheme();
-  const [localTheme, setLocalTheme] = useState(theme);
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+  const { colors, setColors, logoSettings, setLogoSettings } = useTheme();
+  const [loading, setLoading] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [visualSettings, setVisualSettings] = useState({
+    logo_width: 120,
+    logo_height: 120,
+    maintain_aspect_ratio: true,
+    primary_color: '#000000',
+    secondary_color: '#ffffff',
+    accent_color: '#1CFF00',
+  });
 
   useEffect(() => {
-    setLocalTheme(theme);
-  }, [theme]);
+    fetchVisualSettings();
+  }, []);
 
-  const validateHexColor = (hex) => {
-    const hexRegex = /^#[0-9A-F]{6}$/i;
-    return hexRegex.test(hex);
+  const fetchVisualSettings = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/visuals`);
+      if (response.data) {
+        setVisualSettings(response.data);
+        if (response.data.logo_path) {
+          setLogoPreview(process.env.REACT_APP_BACKEND_URL + response.data.logo_path);
+        }
+      }
+    } catch (error) {
+      console.error('[Gorsellik] Error fetching visual settings:', error);
+    }
   };
 
   const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+    setLogoFile(file);
+  };
+
+  const handleSaveLogo = async () => {
+    if (!logoFile) {
+      toast.error('Lütfen bir logo seçin');
+      return;
+    }
+
     try {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      setUploading(true);
+      setLoading(true);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', logoFile);
+      formData.append('width', visualSettings.logo_width);
+      formData.append('height', visualSettings.logo_height);
+      formData.append('maintain_aspect_ratio', visualSettings.maintain_aspect_ratio);
 
-      const response = await axios.post(`${API_URL}/visuals/logo`, formData, {
+      await axios.post(`${API_URL}/visuals/logo`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      toast.success('Logo yüklendi!');
-      
-      // Update local theme and apply immediately
-      const newTheme = { ...localTheme, logo_url: response.data.logo_url };
-      setLocalTheme(newTheme);
-      applyTheme(newTheme);
-      
-      // Trigger page refresh to show new logo
-      window.location.reload();
+      toast.success('Logo yüklendi');
+      setLogoFile(null);
+      fetchVisualSettings();
     } catch (error) {
-      console.error('[Gorsellik] Logo upload error:', error);
+      console.error('[Gorsellik] Error uploading logo:', error);
       toast.error('Logo yüklenemedi');
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
-  const handleSaveTheme = async () => {
+  const handleSaveColors = async () => {
     try {
-      // Validate hex colors
-      if (!validateHexColor(localTheme.primary_color)) {
-        toast.error('Geçersiz ana renk hex kodu');
-        return;
-      }
-      if (!validateHexColor(localTheme.accent_color)) {
-        toast.error('Geçersiz vurgu rengi hex kodu');
-        return;
-      }
-
-      setSaving(true);
-      
-      // Update theme via API
-      const result = await updateTheme({
-        logo_width: localTheme.logo_width,
-        logo_height: localTheme.logo_height,
-        preserve_aspect_ratio: localTheme.preserve_aspect_ratio,
-        primary_color: localTheme.primary_color,
-        accent_color: localTheme.accent_color,
+      setLoading(true);
+      await axios.put(`${API_URL}/visuals/colors`, {
+        primary_color: visualSettings.primary_color,
+        secondary_color: visualSettings.secondary_color,
+        accent_color: visualSettings.accent_color,
       });
 
-      if (result.success) {
-        toast.success(t('saved'));
-        // Apply theme immediately without reload
-        applyTheme(localTheme);
-        console.log('[Gorsellik] Theme applied live:', localTheme);
-      } else {
-        toast.error(result.error || 'Kaydedilemedi');
-      }
+      // Update theme context for live preview
+      setColors({
+        primary: visualSettings.primary_color,
+        accent: visualSettings.accent_color,
+      });
+
+      toast.success('Renkler kaydedildi');
     } catch (error) {
-      console.error('[Gorsellik] Save error:', error);
-      toast.error('Tema kaydedilemedi');
+      console.error('[Gorsellik] Error saving colors:', error);
+      toast.error('Renkler kaydedilemedi');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const logoStyle = {
-    width: localTheme.preserve_aspect_ratio ? 'auto' : `${localTheme.logo_width}px`,
-    height: `${localTheme.logo_height}px`,
-    maxWidth: `${localTheme.logo_width}px`,
-    objectFit: localTheme.preserve_aspect_ratio ? 'contain' : 'cover',
+  const handleColorChange = (colorType, value) => {
+    setVisualSettings({ ...visualSettings, [colorType]: value });
   };
+
+  // Only admins can access this page
+  if (user?.role !== 'Yönetici') {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6">
+          <p className="text-center text-gray-600">Bu sayfaya erişim yetkiniz yok.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -111,157 +135,174 @@ const Gorsellik = () => {
         <p className="text-gray-600 mt-1">{t('gorsellikSubtitle')}</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Logo Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              {t('logoSettings')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label>{t('uploadLogo')}</Label>
+      {/* Logo Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ImageIcon className="w-5 h-5" />
+            Logo Ayarları
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            {logoPreview && (
+              <div className="flex-shrink-0">
+                <img
+                  src={logoPreview}
+                  alt="Logo preview"
+                  style={{
+                    width: `${visualSettings.logo_width}px`,
+                    height: visualSettings.maintain_aspect_ratio ? 'auto' : `${visualSettings.logo_height}px`,
+                  }}
+                  className="border-2 border-gray-200 rounded"
+                />
+              </div>
+            )}
+            <div className="flex-1">
+              <Label htmlFor="logo-upload" className="cursor-pointer">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-accent transition-colors">
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">Logo yüklemek için tıklayın</p>
+                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, SVG (Max 2MB)</p>
+                </div>
+              </Label>
               <Input
+                id="logo-upload"
                 type="file"
                 accept="image/*"
+                className="hidden"
                 onChange={handleLogoUpload}
-                disabled={uploading}
-                className="mt-1"
-              />
-              <p className="text-xs text-gray-500 mt-1">PNG, JPG veya WEBP (Maks 5MB)</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t('width')} (px)</Label>
-                <Input
-                  type="number"
-                  value={localTheme.logo_width}
-                  onChange={(e) => setLocalTheme({ ...localTheme, logo_width: parseInt(e.target.value) || 150 })}
-                />
-              </div>
-              <div>
-                <Label>{t('height')} (px)</Label>
-                <Input
-                  type="number"
-                  value={localTheme.logo_height}
-                  onChange={(e) => setLocalTheme({ ...localTheme, logo_height: parseInt(e.target.value) || 50 })}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="preserve-ratio" className="cursor-pointer">
-                {t('preserveAspectRatio')}
-              </Label>
-              <Switch
-                id="preserve-ratio"
-                checked={localTheme.preserve_aspect_ratio}
-                onCheckedChange={(checked) => setLocalTheme({ ...localTheme, preserve_aspect_ratio: checked })}
               />
             </div>
+          </div>
 
-            <div className="border-t pt-6">
-              <Label className="mb-3 block">
-                <Eye className="w-4 h-4 inline mr-2" />
-                {t('logoPreview')}
-              </Label>
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 flex items-center justify-center min-h-[120px]">
-                <img
-                  src={process.env.REACT_APP_BACKEND_URL + theme.logo_url}
-                  alt="Logo Preview"
-                  style={logoStyle}
-                  className="object-contain"
-                  onError={(e) => {
-                    console.error('[Gorsellik] Logo load error');
-                    e.target.style.display = 'none';
-                  }}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Theme Colors */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5" />
-              {t('themeColors')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>{t('primaryColor')}</Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  value={localTheme.primary_color}
-                  onChange={(e) => setLocalTheme({ ...localTheme, primary_color: e.target.value })}
-                  placeholder="#000000"
-                />
-                <div
-                  className="w-16 h-10 rounded border-2 border-gray-200 flex-shrink-0"
-                  style={{ backgroundColor: localTheme.primary_color }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Ana renk ve metinler</p>
+              <Label>Genişlik (px)</Label>
+              <Input
+                type="number"
+                value={visualSettings.logo_width}
+                onChange={(e) => setVisualSettings({ ...visualSettings, logo_width: parseInt(e.target.value) })}
+              />
             </div>
-
             <div>
-              <Label>{t('accentColor')}</Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  value={localTheme.accent_color}
-                  onChange={(e) => setLocalTheme({ ...localTheme, accent_color: e.target.value })}
-                  placeholder="#1CFF00"
-                />
-                <div
-                  className="w-16 h-10 rounded border-2 border-gray-200 flex-shrink-0"
-                  style={{ backgroundColor: localTheme.accent_color }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Vurgular ve butonlar</p>
+              <Label>Yükseklik (px)</Label>
+              <Input
+                type="number"
+                value={visualSettings.logo_height}
+                onChange={(e) => setVisualSettings({ ...visualSettings, logo_height: parseInt(e.target.value) })}
+                disabled={visualSettings.maintain_aspect_ratio}
+              />
             </div>
+          </div>
 
-            <div className="border-t pt-6">
-              <Label className="mb-3 block">Renk Önizleme</Label>
-              <div className="space-y-2">
-                <div
-                  className="p-4 rounded-lg"
-                  style={{ backgroundColor: localTheme.primary_color, color: '#ffffff' }}
-                >
-                  <p className="font-semibold">Ana Renk</p>
-                  <p className="text-sm">Kontrast kontrolü için örnek metin</p>
-                </div>
-                <div
-                  className="p-4 rounded-lg"
-                  style={{ backgroundColor: localTheme.accent_color, color: localTheme.primary_color }}
-                >
-                  <p className="font-semibold">Vurgu Rengi</p>
-                  <p className="text-sm">Kontrast kontrolü için örnek metin</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <div className="flex items-center justify-between">
+            <Label>En-boy oranını koru</Label>
+            <Switch
+              checked={visualSettings.maintain_aspect_ratio}
+              onCheckedChange={(checked) => setVisualSettings({ ...visualSettings, maintain_aspect_ratio: checked })}
+            />
+          </div>
 
-      {/* Save Button */}
-      <Card>
-        <CardContent className="pt-6">
-          <Button
-            onClick={handleSaveTheme}
-            disabled={saving}
-            className="w-full bg-accent hover:bg-accent/90 text-black font-semibold py-6"
-          >
+          <Button onClick={handleSaveLogo} disabled={loading || !logoFile} className="w-full">
             <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Kaydediliyor...' : t('saveAndApply')}
+            Logo Kaydet
           </Button>
-          <p className="text-xs text-gray-500 text-center mt-2">
-            Değişiklikler anlık olarak uygulanacaktır
-          </p>
+        </CardContent>
+      </Card>
+
+      {/* Brand Colors */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="w-5 h-5" />
+            Marka Renkleri
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Birincil Renk</Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={visualSettings.primary_color}
+                onChange={(e) => handleColorChange('primary_color', e.target.value)}
+                placeholder="#000000"
+              />
+              <Input
+                type="color"
+                value={visualSettings.primary_color}
+                onChange={(e) => handleColorChange('primary_color', e.target.value)}
+                className="w-20"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>İkincil Renk</Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={visualSettings.secondary_color}
+                onChange={(e) => handleColorChange('secondary_color', e.target.value)}
+                placeholder="#ffffff"
+              />
+              <Input
+                type="color"
+                value={visualSettings.secondary_color}
+                onChange={(e) => handleColorChange('secondary_color', e.target.value)}
+                className="w-20"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Vurgu Rengi (Accent)</Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={visualSettings.accent_color}
+                onChange={(e) => handleColorChange('accent_color', e.target.value)}
+                placeholder="#1CFF00"
+              />
+              <Input
+                type="color"
+                value={visualSettings.accent_color}
+                onChange={(e) => handleColorChange('accent_color', e.target.value)}
+                className="w-20"
+              />
+            </div>
+          </div>
+
+          {/* Color Preview */}
+          <div className="grid grid-cols-3 gap-4 pt-4">
+            <div>
+              <p className="text-xs text-gray-600 mb-2">Birincil</p>
+              <div
+                className="h-16 rounded border-2 border-gray-200"
+                style={{ backgroundColor: visualSettings.primary_color }}
+              ></div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 mb-2">İkincil</p>
+              <div
+                className="h-16 rounded border-2 border-gray-200"
+                style={{ backgroundColor: visualSettings.secondary_color }}
+              ></div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 mb-2">Vurgu</p>
+              <div
+                className="h-16 rounded border-2 border-gray-200"
+                style={{ backgroundColor: visualSettings.accent_color }}
+              ></div>
+            </div>
+          </div>
+
+          <Button onClick={handleSaveColors} disabled={loading} className="w-full">
+            <Save className="w-4 h-4 mr-2" />
+            Renkleri Kaydet
+          </Button>
         </CardContent>
       </Card>
     </div>
