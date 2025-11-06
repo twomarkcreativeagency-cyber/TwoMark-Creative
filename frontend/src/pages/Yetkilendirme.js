@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Users, Trash2, Shield } from 'lucide-react';
+import { Plus, Users, Trash2, Shield, Edit2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -20,11 +20,18 @@ const Yetkilendirme = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [newUser, setNewUser] = useState({
     full_name: '',
     username: '',
     password: '',
     role: 'Editör',
+  });
+  const [editUser, setEditUser] = useState({
+    full_name: '',
+    password: '',
+    role: '',
   });
 
   const roles = ['Yönetici', 'Editör', 'Firma'];
@@ -62,11 +69,53 @@ const Yetkilendirme = () => {
         password: '',
         role: 'Editör',
       });
-      // Refresh users list immediately
       await fetchUsers();
     } catch (error) {
       console.error('[Yetkilendirme] Error creating user:', error);
       toast.error(error.response?.data?.detail || 'Kullanıcı oluşturulamadı');
+    }
+  };
+
+  const handleEditClick = (user) => {
+    setEditingUser(user);
+    setEditUser({
+      full_name: user.full_name,
+      password: '',
+      role: user.role,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    try {
+      if (!editUser.full_name || !editUser.role) {
+        toast.error('Ad Soyad ve rol gereklidir');
+        return;
+      }
+
+      const updateData = {
+        full_name: editUser.full_name,
+        role: editUser.role,
+      };
+
+      // Only include password if it's being changed
+      if (editUser.password && editUser.password.trim() !== '') {
+        if (editUser.password.length < 6) {
+          toast.error('Şifre en az 6 karakter olmalıdır');
+          return;
+        }
+        updateData.password = editUser.password;
+      }
+
+      await axios.put(`${API_URL}/users/${editingUser.id}`, updateData);
+      toast.success('Kullanıcı başarıyla güncellendi');
+      setEditDialogOpen(false);
+      setEditingUser(null);
+      setEditUser({ full_name: '', password: '', role: '' });
+      await fetchUsers();
+    } catch (error) {
+      console.error('[Yetkilendirme] Error updating user:', error);
+      toast.error(error.response?.data?.detail || 'Kullanıcı güncellenemedi');
     }
   };
 
@@ -175,6 +224,66 @@ const Yetkilendirme = () => {
         )}
       </div>
 
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kullanıcı Düzenle</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>{t('fullName')}</Label>
+              <Input
+                value={editUser.full_name}
+                onChange={(e) => setEditUser({ ...editUser, full_name: e.target.value })}
+                placeholder="Ad Soyad"
+              />
+            </div>
+
+            <div>
+              <Label>{t('username')}</Label>
+              <Input
+                value={editingUser?.username || ''}
+                disabled
+                className="bg-gray-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">Kullanıcı adı değiştirilemez</p>
+            </div>
+
+            <div>
+              <Label>Yeni Şifre (Opsiyonel)</Label>
+              <Input
+                type="password"
+                value={editUser.password}
+                onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
+                placeholder="Boş bırakılırsa değiştirilmez"
+              />
+              <p className="text-xs text-gray-500 mt-1">En az 6 karakter</p>
+            </div>
+
+            <div>
+              <Label>{t('role')}</Label>
+              <Select value={editUser.role} onValueChange={(value) => setEditUser({ ...editUser, role: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button onClick={handleUpdateUser} className="w-full">
+              Güncelle
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -245,44 +354,41 @@ const Yetkilendirme = () => {
                     <TableCell className="font-medium">{user.full_name}</TableCell>
                     <TableCell>{user.username}</TableCell>
                     <TableCell>
-                      {currentUser?.role === 'Yönetici' && user.id !== currentUser.id ? (
-                        <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value)}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roles.map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {role}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            user.role === 'Yönetici'
-                              ? 'bg-red-100 text-red-700'
-                              : user.role === 'Editör'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {user.role}
-                        </span>
-                      )}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          user.role === 'Yönetici'
+                            ? 'bg-red-100 text-red-700'
+                            : user.role === 'Editör'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {user.role}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {currentUser?.role === 'Yönetici' && user.id !== currentUser.id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <div className="flex justify-end gap-2">
+                        {currentUser?.role === 'Yönetici' && user.id !== currentUser.id && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditClick(user)}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
