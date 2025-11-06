@@ -167,6 +167,17 @@ export const translations = {
     accentColor: 'Vurgu Rengi',
     saveAndApply: 'Kaydet ve Uygula',
     
+    // New Additions for AnaAkis Dashboard
+    totalPosts: 'Toplam Gönderiler',
+    posts: 'Gönderi',
+    firms: 'Firma',
+    pendingPayments: 'Bekleyen Ödemeler',
+    payments: 'Ödeme',
+    upcomingEvents: 'Yaklaşan Etkinlikler',
+    events: 'Etkinlik',
+    recentActivity: 'Son Aktiviteler',
+    noRecentActivity: 'Henüz aktivite yok',
+    
     // Notifications
     loginSuccess: 'Giriş başarılı!',
     postCreated: 'Gönderi oluşturuldu!',
