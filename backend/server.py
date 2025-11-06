@@ -607,7 +607,18 @@ async def get_events(current_user: dict = Depends(get_current_user)):
     if current_user['type'] == 'company':
         company_id = current_user['data']['id']
         query = {"assigned_company": company_id}
-    elif current_user['data']['role'] in ['Admin', 'Editor']:
+    elif current_user['data']['role'] == 'Editor':
+        # Editors see events assigned to them or shared events
+        user_id = current_user['data']['id']
+        query = {
+            "$or": [
+                {"assigned_editors": user_id},
+                {"type": "shared"},
+                {"created_by": user_id}
+            ]
+        }
+    elif current_user['data']['role'] == 'Admin':
+        # Admins see all events
         pass
     
     events = await db.events.find(query, {"_id": 0}).to_list(1000)
