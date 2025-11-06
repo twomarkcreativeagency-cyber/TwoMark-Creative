@@ -61,7 +61,11 @@ const ProfitTable = () => {
     }
 
     try {
-      const payload = { ...newRecord, amount: parseFloat(newRecord.amount) };
+      const payload = { 
+        ...newRecord, 
+        amount: parseFloat(newRecord.amount),
+        company_id: newRecord.company_id === 'none' ? '' : newRecord.company_id
+      };
       await axios.post(`${API_URL}/profits`, payload);
       toast.success('Record created successfully!');
       setDialogOpen(false);
