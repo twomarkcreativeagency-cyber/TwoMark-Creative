@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --primary-color: #1CFF00;
-  --secondary-color: #0A0A0A;
+  --primary-color: #000000;
   --accent-color: #1CFF00;
+  --tw-primary: #000000;
+  --tw-accent: #1CFF00;
 }
 
 * {
@@ -13,13 +14,10 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  background-color: #f8fafc;
 }
 
 /* Custom scrollbar */
@@ -41,7 +39,7 @@ code {
   background: #94a3b8;
 }
 
-/* Primary color override */
+/* Theme colors */
 .bg-primary {
   background-color: var(--primary-color) !important;
 }
@@ -54,20 +52,50 @@ code {
   border-color: var(--primary-color) !important;
 }
 
-/* Smooth transitions */
-button, a, input, select, textarea {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+.bg-accent {
+  background-color: var(--accent-color) !important;
+}
+
+.text-accent {
+  color: var(--accent-color) !important;
+}
+
+.border-accent {
+  border-color: var(--accent-color) !important;
+}
+
+/* Hover effects */
+.hover\:bg-accent:hover {
+  background-color: var(--accent-color) !important;
+}
+
+.hover\:text-accent:hover {
+  color: var(--accent-color) !important;
 }
 
 /* Focus states */
 input:focus, select:focus, textarea:focus {
-  outline: 2px solid var(--primary-color);
+  outline: 2px solid var(--accent-color);
   outline-offset: 2px;
+}
+
+/* Button transitions */
+button, a, input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
   body {
-    padding-bottom: 80px; /* Space for bottom nav */
+    padding-bottom: 70px;
   }
 }
