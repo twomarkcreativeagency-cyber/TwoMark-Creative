@@ -78,7 +78,8 @@ const FirmaAkisi = () => {
         target_company: '',
         date: new Date().toISOString().split('T')[0],
       });
-      fetchPosts();
+      // Refresh both posts and companies
+      await Promise.all([fetchPosts(), fetchCompanies()]);
       console.log('[FirmaAkisi] Post created:', response.data);
     } catch (error) {
       console.error('[FirmaAkisi] Error creating post:', error);
