@@ -8,16 +8,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
 from jose import jwt, JWTError
 import aiofiles
-import shutil
 from PIL import Image
-import json
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -28,16 +26,14 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT Configuration
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'twomark-creative-secret-key-change-in-production')
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'twomark-creative-secret-key-2025')
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 security = HTTPBearer()
 
-# Create the main app without a prefix
+# Create the main app
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
 # Serve uploads directory
@@ -53,24 +49,24 @@ class ConnectionManager:
         self.active_connections.append(websocket)
         
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
         
     async def broadcast(self, message: dict):
-        for connection in self.active_connections:
+        for connection in self.active_connections[:]:
             try:
                 await connection.send_json(message)
             except:
-                pass
+                await self.disconnect(connection)
 
 manager = ConnectionManager()
 
-# WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_text()
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
@@ -78,18 +74,13 @@ async def websocket_endpoint(websocket: WebSocket):
 # MODELS
 # ========================
 
-class UserRole(str):
-    ADMIN = "Admin"
-    EDITOR = "Editor"
-    COMPANY_USER = "CompanyUser"
-
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     full_name: str
     username: str
-    password: str  # hashed
-    role: str
+    password: str
+    role: Literal["Yönetici", "Editör", "Firma"]
     permissions: List[str] = []
     avatar_url: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -98,7 +89,7 @@ class UserCreate(BaseModel):
     full_name: str
     username: str
     password: str
-    role: str
+    role: Literal["Yönetici", "Editör", "Firma"]
     permissions: List[str] = []
 
 class UserLogin(BaseModel):
@@ -118,7 +109,7 @@ class Company(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     username: str
-    password: str  # hashed
+    password: str
     brand_color_hex: str = "#1CFF00"
     logo_url: Optional[str] = None
     contact_info: Optional[str] = None
@@ -145,16 +136,16 @@ class Post(BaseModel):
     title: str
     content: str
     media: Optional[str] = None
-    created_by: str  # User.id
+    created_by: str
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    feed_type: Literal["main", "company"] = "main"
-    target_companies: List[str] = []  # Company IDs
+    feed_type: Literal["ana_akis", "firma_akisi"] = "ana_akis"
+    target_company: Optional[str] = None
 
 class PostCreate(BaseModel):
     title: str
     content: str
-    feed_type: Literal["main", "company"] = "main"
-    target_companies: List[str] = []
+    feed_type: Literal["ana_akis", "firma_akisi"] = "ana_akis"
+    target_company: Optional[str] = None
 
 class PostResponse(BaseModel):
     id: str
@@ -164,8 +155,9 @@ class PostResponse(BaseModel):
     created_by: str
     created_at: str
     feed_type: str
-    target_companies: List[str]
+    target_company: Optional[str] = None
     creator_name: Optional[str] = None
+    company_name: Optional[str] = None
 
 class CalendarEvent(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -176,9 +168,9 @@ class CalendarEvent(BaseModel):
     start_time: str
     end_time: str
     location: Optional[str] = None
-    created_by: str  # User.id
-    assigned_company: Optional[str] = None  # Company.id
-    assigned_editors: List[str] = []  # List of Editor User IDs
+    created_by: str
+    assigned_company: Optional[str] = None
+    assigned_editors: List[str] = []
     type: Literal["personal", "company", "shared"] = "personal"
     color_hex: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -213,8 +205,8 @@ class CalendarEventResponse(BaseModel):
 class ProfitRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    admin_id: str  # User.id
-    type: Literal["income", "expense"]
+    admin_id: str
+    type: Literal["gelir", "gider"]
     amount: float
     company_id: Optional[str] = None
     company_text: Optional[str] = None
@@ -223,7 +215,7 @@ class ProfitRecord(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ProfitRecordCreate(BaseModel):
-    type: Literal["income", "expense"]
+    type: Literal["gelir", "gider"]
     amount: float
     company_id: Optional[str] = None
     company_text: Optional[str] = None
@@ -244,11 +236,11 @@ class ProfitRecordResponse(BaseModel):
 class Payment(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    created_by: str  # Admin User.id
+    created_by: str
     company_id: str
     title: str
     amount: float
-    status: Literal["to_pay", "paid"] = "to_pay"
+    status: Literal["odenecek", "odendi"] = "odenecek"
     date: str
     notes: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -274,12 +266,12 @@ class PaymentResponse(BaseModel):
 class Visuals(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = "default"
+    admin_id: str
     logo_url: str = "/uploads/logos/default-logo.png"
     logo_width: int = 150
     logo_height: int = 50
     preserve_aspect_ratio: bool = True
-    primary_color: str = "#1CFF00"
-    secondary_color: str = "#0A0A0A"
+    primary_color: str = "#000000"
     accent_color: str = "#1CFF00"
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -288,7 +280,6 @@ class VisualsUpdate(BaseModel):
     logo_height: Optional[int] = None
     preserve_aspect_ratio: Optional[bool] = None
     primary_color: Optional[str] = None
-    secondary_color: Optional[str] = None
     accent_color: Optional[str] = None
 
 # ========================
@@ -341,7 +332,6 @@ async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
         content = await upload_file.read()
         await out_file.write(content)
     
-    # Create thumbnail for images
     if file_extension.lower() in ['.png', '.jpg', '.jpeg', '.webp']:
         try:
             img = Image.open(file_path)
@@ -359,10 +349,9 @@ async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
 
 @api_router.post("/auth/register", response_model=UserResponse)
 async def register_user(user: UserCreate):
-    # Check if username exists
     existing = await db.users.find_one({"username": user.username})
     if existing:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        raise HTTPException(status_code=400, detail="Kullanıcı adı zaten mevcut")
     
     user_dict = user.model_dump()
     user_dict['password'] = hash_password(user.password)
@@ -375,7 +364,6 @@ async def register_user(user: UserCreate):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin):
-    # Try user login
     user_doc = await db.users.find_one({"username": credentials.username}, {"_id": 0})
     if user_doc and verify_password(credentials.password, user_doc['password']):
         token = create_access_token({"sub": user_doc['id'], "type": "user"})
@@ -385,7 +373,6 @@ async def login(credentials: UserLogin):
             "user": UserResponse(**user_doc).model_dump()
         }
     
-    # Try company login
     company_doc = await db.companies.find_one({"username": credentials.username}, {"_id": 0})
     if company_doc and verify_password(credentials.password, company_doc['password']):
         token = create_access_token({"sub": company_doc['id'], "type": "company"})
@@ -395,13 +382,13 @@ async def login(credentials: UserLogin):
             "user": {
                 "id": company_doc['id'],
                 "username": company_doc['username'],
-                "role": "CompanyUser",
+                "role": "Firma",
                 "full_name": company_doc['name'],
-                "permissions": ["Company Feed", "Company Calendar", "Payments"]
+                "permissions": ["Firma Akışı", "Firma Takvimi", "Firma Ödemeleri"]
             }
         }
     
-    raise HTTPException(status_code=401, detail="Invalid credentials")
+    raise HTTPException(status_code=401, detail="Geçersiz kimlik bilgileri")
 
 @api_router.get("/auth/me")
 async def get_me(current_user: dict = Depends(get_current_user)):
@@ -412,9 +399,9 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         return {
             "id": company['id'],
             "username": company['username'],
-            "role": "CompanyUser",
+            "role": "Firma",
             "full_name": company['name'],
-            "permissions": ["Company Feed", "Company Calendar", "Payments"]
+            "permissions": ["Firma Akışı", "Firma Takvimi", "Firma Ödemeleri"]
         }
 
 # ========================
@@ -423,20 +410,20 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/users", response_model=List[UserResponse])
 async def get_users(current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
     return users
 
 @api_router.post("/users", response_model=UserResponse)
 async def create_user(user: UserCreate, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     existing = await db.users.find_one({"username": user.username})
     if existing:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        raise HTTPException(status_code=400, detail="Kullanıcı adı zaten mevcut")
     
     user_dict = user.model_dump()
     user_dict['password'] = hash_password(user.password)
@@ -445,12 +432,14 @@ async def create_user(user: UserCreate, current_user: dict = Depends(get_current
     doc = user_obj.model_dump()
     await db.users.insert_one(doc)
     
+    await manager.broadcast({"type": "user_created", "data": doc})
+    
     return UserResponse(**doc)
 
 @api_router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, user_update: dict, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     if 'password' in user_update and user_update['password']:
         user_update['password'] = hash_password(user_update['password'])
@@ -463,11 +452,11 @@ async def update_user(user_id: str, user_update: dict, current_user: dict = Depe
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     await db.users.delete_one({"id": user_id})
-    return {"message": "User deleted"}
+    return {"message": "Kullanıcı silindi"}
 
 @api_router.post("/users/{user_id}/avatar")
 async def upload_user_avatar(user_id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
@@ -486,12 +475,12 @@ async def get_companies(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/companies", response_model=CompanyResponse)
 async def create_company(company: CompanyCreate, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     existing = await db.companies.find_one({"username": company.username})
     if existing:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        raise HTTPException(status_code=400, detail="Kullanıcı adı zaten mevcut")
     
     company_dict = company.model_dump()
     company_dict['password'] = hash_password(company.password)
@@ -504,8 +493,8 @@ async def create_company(company: CompanyCreate, current_user: dict = Depends(ge
 
 @api_router.put("/companies/{company_id}", response_model=CompanyResponse)
 async def update_company(company_id: str, company_update: dict, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     if 'password' in company_update and company_update['password']:
         company_update['password'] = hash_password(company_update['password'])
@@ -518,16 +507,16 @@ async def update_company(company_id: str, company_update: dict, current_user: di
 
 @api_router.delete("/companies/{company_id}")
 async def delete_company(company_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     await db.companies.delete_one({"id": company_id})
-    return {"message": "Company deleted"}
+    return {"message": "Firma silindi"}
 
 @api_router.post("/companies/{company_id}/logo")
 async def upload_company_logo(company_id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     logo_url = await save_upload_file(file, "logos")
     await db.companies.update_one({"id": company_id}, {"$set": {"logo_url": logo_url}})
@@ -542,30 +531,32 @@ async def get_posts(current_user: dict = Depends(get_current_user)):
     query = {}
     
     if current_user['type'] == 'company':
-        # Company users see only their company feed
         company_id = current_user['data']['id']
         query = {
-            "feed_type": "company",
-            "target_companies": company_id
+            "feed_type": "firma_akisi",
+            "target_company": company_id
         }
-    elif current_user['data']['role'] in ['Admin', 'Editor']:
-        # Admin and Editor see main feed and company feeds
+    elif current_user['data']['role'] in ['Yönetici', 'Editör']:
         pass
     
     posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
-    # Add creator names
     for post in posts:
         user = await db.users.find_one({"id": post['created_by']}, {"_id": 0})
         if user:
             post['creator_name'] = user['full_name']
+        
+        if post.get('target_company'):
+            company = await db.companies.find_one({"id": post['target_company']}, {"_id": 0})
+            if company:
+                post['company_name'] = company['name']
     
     return posts
 
 @api_router.post("/posts", response_model=PostResponse)
 async def create_post(post: PostCreate, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] not in ['Admin', 'Editor']:
-        raise HTTPException(status_code=403, detail="Access denied")
+    if current_user['type'] != 'user' or current_user['data']['role'] not in ['Yönetici', 'Editör']:
+        raise HTTPException(status_code=403, detail="Erişim reddedildi")
     
     post_dict = post.model_dump()
     post_dict['created_by'] = current_user['data']['id']
@@ -574,14 +565,14 @@ async def create_post(post: PostCreate, current_user: dict = Depends(get_current
     doc = post_obj.model_dump()
     await db.posts.insert_one(doc)
     
-    # Broadcast notification
-    await manager.broadcast({
-        "type": "new_post",
-        "data": doc
-    })
+    await manager.broadcast({"type": "new_post", "data": doc})
     
-    # Add creator name
     doc['creator_name'] = current_user['data']['full_name']
+    
+    if doc.get('target_company'):
+        company = await db.companies.find_one({"id": doc['target_company']}, {"_id": 0})
+        if company:
+            doc['company_name'] = company['name']
     
     return PostResponse(**doc)
 
@@ -594,7 +585,7 @@ async def upload_post_media(post_id: str, file: UploadFile = File(...), current_
 @api_router.delete("/posts/{post_id}")
 async def delete_post(post_id: str, current_user: dict = Depends(get_current_user)):
     await db.posts.delete_one({"id": post_id})
-    return {"message": "Post deleted"}
+    return {"message": "Gönderi silindi"}
 
 # ========================
 # CALENDAR EVENT ENDPOINTS
@@ -607,8 +598,7 @@ async def get_events(current_user: dict = Depends(get_current_user)):
     if current_user['type'] == 'company':
         company_id = current_user['data']['id']
         query = {"assigned_company": company_id}
-    elif current_user['data']['role'] == 'Editor':
-        # Editors see events assigned to them or shared events
+    elif current_user['data']['role'] == 'Editör':
         user_id = current_user['data']['id']
         query = {
             "$or": [
@@ -617,13 +607,11 @@ async def get_events(current_user: dict = Depends(get_current_user)):
                 {"created_by": user_id}
             ]
         }
-    elif current_user['data']['role'] == 'Admin':
-        # Admins see all events
+    elif current_user['data']['role'] == 'Yönetici':
         pass
     
     events = await db.events.find(query, {"_id": 0}).to_list(1000)
     
-    # Add company names
     for event in events:
         if event.get('assigned_company'):
             company = await db.companies.find_one({"id": event['assigned_company']}, {"_id": 0})
@@ -639,7 +627,6 @@ async def create_event(event: CalendarEventCreate, current_user: dict = Depends(
     event_dict = event.model_dump()
     event_dict['created_by'] = current_user['data']['id'] if current_user['type'] == 'user' else current_user['data']['id']
     
-    # Auto-set color from company if assigned
     if event.assigned_company and not event.color_hex:
         company = await db.companies.find_one({"id": event.assigned_company}, {"_id": 0})
         if company:
@@ -649,13 +636,8 @@ async def create_event(event: CalendarEventCreate, current_user: dict = Depends(
     doc = event_obj.model_dump()
     await db.events.insert_one(doc)
     
-    # Broadcast notification
-    await manager.broadcast({
-        "type": "new_event",
-        "data": doc
-    })
+    await manager.broadcast({"type": "new_event", "data": doc})
     
-    # Add company name
     if doc.get('assigned_company'):
         company = await db.companies.find_one({"id": doc['assigned_company']}, {"_id": 0})
         if company:
@@ -668,7 +650,6 @@ async def update_event(event_id: str, event_update: dict, current_user: dict = D
     await db.events.update_one({"id": event_id}, {"$set": event_update})
     event_doc = await db.events.find_one({"id": event_id}, {"_id": 0})
     
-    # Add company name
     if event_doc.get('assigned_company'):
         company = await db.companies.find_one({"id": event_doc['assigned_company']}, {"_id": 0})
         if company:
@@ -679,22 +660,25 @@ async def update_event(event_id: str, event_update: dict, current_user: dict = D
 @api_router.delete("/events/{event_id}")
 async def delete_event(event_id: str, current_user: dict = Depends(get_current_user)):
     await db.events.delete_one({"id": event_id})
-    return {"message": "Event deleted"}
+    return {"message": "Etkinlik silindi"}
 
 # ========================
 # PROFIT RECORD ENDPOINTS
 # ========================
 
 @api_router.get("/profits", response_model=List[ProfitRecordResponse])
-async def get_profit_records(current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+async def get_profit_records(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
-    # Only show records for this admin
     admin_id = current_user['data']['id']
-    records = await db.profits.find({"admin_id": admin_id}, {"_id": 0}).sort("date", -1).to_list(1000)
+    query = {"admin_id": admin_id}
     
-    # Add company names
+    if start_date and end_date:
+        query["date"] = {"$gte": start_date, "$lte": end_date}
+    
+    records = await db.profits.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    
     for record in records:
         if record.get('company_id'):
             company = await db.companies.find_one({"id": record['company_id']}, {"_id": 0})
@@ -705,8 +689,8 @@ async def get_profit_records(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/profits", response_model=ProfitRecordResponse)
 async def create_profit_record(profit: ProfitRecordCreate, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     profit_dict = profit.model_dump()
     profit_dict['admin_id'] = current_user['data']['id']
@@ -715,7 +699,6 @@ async def create_profit_record(profit: ProfitRecordCreate, current_user: dict = 
     doc = profit_obj.model_dump()
     await db.profits.insert_one(doc)
     
-    # Add company name
     if doc.get('company_id'):
         company = await db.companies.find_one({"id": doc['company_id']}, {"_id": 0})
         if company:
@@ -725,8 +708,8 @@ async def create_profit_record(profit: ProfitRecordCreate, current_user: dict = 
 
 @api_router.put("/profits/{profit_id}", response_model=ProfitRecordResponse)
 async def update_profit_record(profit_id: str, profit_update: dict, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     await db.profits.update_one({"id": profit_id}, {"$set": profit_update})
     profit_doc = await db.profits.find_one({"id": profit_id}, {"_id": 0})
@@ -740,30 +723,31 @@ async def update_profit_record(profit_id: str, profit_update: dict, current_user
 
 @api_router.delete("/profits/{profit_id}")
 async def delete_profit_record(profit_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     await db.profits.delete_one({"id": profit_id})
-    return {"message": "Profit record deleted"}
+    return {"message": "Kayıt silindi"}
 
 # ========================
 # PAYMENT ENDPOINTS
 # ========================
 
 @api_router.get("/payments", response_model=List[PaymentResponse])
-async def get_payments(current_user: dict = Depends(get_current_user)):
+async def get_payments(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     query = {}
     
     if current_user['type'] == 'company':
-        # Company users see only their payments
         company_id = current_user['data']['id']
         query = {"company_id": company_id}
-    elif current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Access denied")
+    elif current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Erişim reddedildi")
+    
+    if start_date and end_date:
+        query["date"] = {"$gte": start_date, "$lte": end_date}
     
     payments = await db.payments.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
     
-    # Add company names
     for payment in payments:
         company = await db.companies.find_one({"id": payment['company_id']}, {"_id": 0})
         if company:
@@ -773,8 +757,8 @@ async def get_payments(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/payments", response_model=PaymentResponse)
 async def create_payment(payment: PaymentCreate, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     payment_dict = payment.model_dump()
     payment_dict['created_by'] = current_user['data']['id']
@@ -783,13 +767,8 @@ async def create_payment(payment: PaymentCreate, current_user: dict = Depends(ge
     doc = payment_obj.model_dump()
     await db.payments.insert_one(doc)
     
-    # Broadcast notification to company
-    await manager.broadcast({
-        "type": "new_payment",
-        "data": doc
-    })
+    await manager.broadcast({"type": "new_payment", "data": doc})
     
-    # Add company name
     company = await db.companies.find_one({"id": doc['company_id']}, {"_id": 0})
     if company:
         doc['company_name'] = company['name']
@@ -798,11 +777,13 @@ async def create_payment(payment: PaymentCreate, current_user: dict = Depends(ge
 
 @api_router.put("/payments/{payment_id}", response_model=PaymentResponse)
 async def update_payment(payment_id: str, payment_update: dict, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     await db.payments.update_one({"id": payment_id}, {"$set": payment_update})
     payment_doc = await db.payments.find_one({"id": payment_id}, {"_id": 0})
+    
+    await manager.broadcast({"type": "payment_updated", "data": payment_doc})
     
     company = await db.companies.find_one({"id": payment_doc['company_id']}, {"_id": 0})
     if company:
@@ -812,61 +793,59 @@ async def update_payment(payment_id: str, payment_update: dict, current_user: di
 
 @api_router.delete("/payments/{payment_id}")
 async def delete_payment(payment_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     await db.payments.delete_one({"id": payment_id})
-    return {"message": "Payment deleted"}
+    return {"message": "Ödeme silindi"}
 
 # ========================
 # VISUALS ENDPOINTS
 # ========================
 
 @api_router.get("/visuals", response_model=Visuals)
-async def get_visuals():
-    visuals = await db.visuals.find_one({"id": "default"}, {"_id": 0})
+async def get_visuals(current_user: dict = Depends(get_current_user)):
+    admin_id = current_user['data']['id']
+    visuals = await db.visuals.find_one({"admin_id": admin_id}, {"_id": 0})
     if not visuals:
-        # Create default visuals
-        default_visuals = Visuals()
+        default_visuals = Visuals(admin_id=admin_id)
         await db.visuals.insert_one(default_visuals.model_dump())
         return default_visuals
     return Visuals(**visuals)
 
 @api_router.put("/visuals", response_model=Visuals)
 async def update_visuals(visuals_update: VisualsUpdate, current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
+    admin_id = current_user['data']['id']
     update_dict = visuals_update.model_dump(exclude_unset=True)
     update_dict['updated_at'] = datetime.now(timezone.utc).isoformat()
     
     await db.visuals.update_one(
-        {"id": "default"},
+        {"admin_id": admin_id},
         {"$set": update_dict},
         upsert=True
     )
     
-    visuals = await db.visuals.find_one({"id": "default"}, {"_id": 0})
+    visuals = await db.visuals.find_one({"admin_id": admin_id}, {"_id": 0})
     return Visuals(**visuals)
 
 @api_router.post("/visuals/logo")
 async def upload_visuals_logo(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    if current_user['type'] != 'user' or current_user['data']['role'] != 'Admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user['type'] != 'user' or current_user['data']['role'] != 'Yönetici':
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli")
     
     logo_url = await save_upload_file(file, "logos")
+    admin_id = current_user['data']['id']
     
     await db.visuals.update_one(
-        {"id": "default"},
+        {"admin_id": admin_id},
         {"$set": {"logo_url": logo_url, "updated_at": datetime.now(timezone.utc).isoformat()}},
         upsert=True
     )
     
     return {"logo_url": logo_url}
-
-# ========================
-# INCLUDE ROUTER
-# ========================
 
 app.include_router(api_router)
 
