@@ -62,7 +62,8 @@ const FirmaAkisi = () => {
 
   const handleCreatePost = async () => {
     try {
-      if (!newPost.title || !newPost.content || !newPost.target_company) {
+      // Check if target_company is not the placeholder value
+      if (!newPost.title || !newPost.content || !newPost.target_company || newPost.target_company === 'unselected') {
         toast.error(t('fillAllFields'));
         return;
       }
@@ -140,14 +141,14 @@ const FirmaAkisi = () => {
               <div>
                 <Label>{t('company')}</Label>
                 <Select
-                  value={newPost.target_company || ''}
-                  onValueChange={(value) => setNewPost({ ...newPost, target_company: value })}
+                  value={newPost.target_company || 'unselected'}
+                  onValueChange={(value) => setNewPost({ ...newPost, target_company: value === 'unselected' ? '' : value })}
                 >
                   <SelectTrigger data-testid="company-select">
                     <SelectValue placeholder={t('select')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t('select')}</SelectItem>
+                    <SelectItem value="unselected">{t('select')}</SelectItem>
                     {companies.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}

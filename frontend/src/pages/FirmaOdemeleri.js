@@ -68,7 +68,8 @@ const FirmaOdemeleri = () => {
 
   const handleCreatePayment = async () => {
     try {
-      if (!newPayment.company_id || !newPayment.title || !newPayment.amount || !newPayment.date) {
+      // Check if company_id is not the placeholder value
+      if (!newPayment.company_id || newPayment.company_id === 'unselected' || !newPayment.title || !newPayment.amount || !newPayment.date) {
         toast.error(t('fillAllFields'));
         return;
       }
@@ -138,14 +139,14 @@ const FirmaOdemeleri = () => {
                 <div>
                   <Label>{t('company')}</Label>
                   <Select
-                    value={newPayment.company_id || ''}
-                    onValueChange={(value) => setNewPayment({ ...newPayment, company_id: value })}
+                    value={newPayment.company_id || 'unselected'}
+                    onValueChange={(value) => setNewPayment({ ...newPayment, company_id: value === 'unselected' ? '' : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={t('select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('select')}</SelectItem>
+                      <SelectItem value="unselected">{t('select')}</SelectItem>
                       {companies.map((company) => (
                         <SelectItem key={company.id} value={company.id}>
                           {company.name}

@@ -73,6 +73,7 @@ const KazancTablosu = () => {
       await axios.post(`${API_URL}/profits`, {
         ...newRecord,
         amount: parseFloat(newRecord.amount),
+        company_id: newRecord.company_id === 'none' ? '' : newRecord.company_id,
       });
       
       toast.success(t('recordCreated'));
@@ -181,14 +182,14 @@ const KazancTablosu = () => {
               <div>
                 <Label>{t('companyOptional')}</Label>
                 <Select
-                  value={newRecord.company_id || ''}
-                  onValueChange={(value) => setNewRecord({ ...newRecord, company_id: value })}
+                  value={newRecord.company_id || 'none'}
+                  onValueChange={(value) => setNewRecord({ ...newRecord, company_id: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('select')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t('none')}</SelectItem>
+                    <SelectItem value="none">{t('none')}</SelectItem>
                     {companies.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
@@ -198,7 +199,7 @@ const KazancTablosu = () => {
                 </Select>
               </div>
 
-              {!newRecord.company_id && (
+              {(!newRecord.company_id || newRecord.company_id === 'none') && (
                 <div>
                   <Label>Firma Adı (Serbest Metin)</Label>
                   <Input

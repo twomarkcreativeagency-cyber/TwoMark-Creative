@@ -94,7 +94,12 @@ const SharedCalendar = () => {
     }
 
     try {
-      await axios.post(`${API_URL}/events`, newEvent);
+      // Convert 'unassigned' back to empty string for backend
+      const eventToSubmit = {
+        ...newEvent,
+        assigned_company: newEvent.assigned_company === 'unassigned' ? '' : newEvent.assigned_company,
+      };
+      await axios.post(`${API_URL}/events`, eventToSubmit);
       toast.success('Event created successfully!');
       setDialogOpen(false);
       setNewEvent({
@@ -240,13 +245,13 @@ const SharedCalendar = () => {
             <div>
               <Label>Assign to Company (Optional)</Label>
               <Select
-                value={newEvent.assigned_company}
+                value={newEvent.assigned_company || 'unassigned'}
                 onValueChange={(value) => {
                   const company = companies.find((c) => c.id === value);
                   setNewEvent({
                     ...newEvent,
-                    assigned_company: value,
-                    color_hex: company?.brand_color_hex || '#1CFF00',
+                    assigned_company: value === 'unassigned' ? '' : value,
+                    color_hex: value === 'unassigned' ? '#1CFF00' : (company?.brand_color_hex || '#1CFF00'),
                   });
                 }}
               >
@@ -254,7 +259,7 @@ const SharedCalendar = () => {
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="unassigned">None</SelectItem>
                   {companies.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
