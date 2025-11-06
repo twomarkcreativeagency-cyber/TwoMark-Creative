@@ -62,7 +62,8 @@ const Yetkilendirme = () => {
         password: '',
         role: 'Editör',
       });
-      fetchUsers();
+      // Refresh users list immediately
+      await fetchUsers();
     } catch (error) {
       console.error('[Yetkilendirme] Error creating user:', error);
       toast.error(error.response?.data?.detail || 'Kullanıcı oluşturulamadı');
