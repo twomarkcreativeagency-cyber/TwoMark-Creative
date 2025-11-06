@@ -15,6 +15,12 @@ const Sidebar = () => {
   const { theme } = useTheme();
   const location = useLocation();
 
+  // Define hasAccess first - before it's used in getMenuItems
+  const hasAccess = (roles) => {
+    if (!user) return true; // Show during loading
+    return roles?.includes(user.role);
+  };
+
   // Define menu items with role-based submenu filtering
   const getMenuItems = () => {
     const items = [
@@ -50,11 +56,6 @@ const Sidebar = () => {
   };
 
   const menuItems = getMenuItems();
-
-  const hasAccess = (roles) => {
-    if (!user) return true; // Show during loading
-    return roles?.includes(user.role);
-  };
 
   const logoStyle = {
     width: theme.preserve_aspect_ratio ? 'auto' : `${theme.logo_width}px`,
