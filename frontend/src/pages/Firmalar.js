@@ -15,12 +15,21 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const Firmalar = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState(null);
   const [newCompany, setNewCompany] = useState({
     name: '',
     username: '',
+    password: '',
+    brand_color_hex: '#1CFF00',
+    contact_info: '',
+  });
+  const [editCompany, setEditCompany] = useState({
+    name: '',
     password: '',
     brand_color_hex: '#1CFF00',
     contact_info: '',
