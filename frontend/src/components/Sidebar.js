@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useVisuals } from '../contexts/VisualsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   LayoutDashboard,
   Users,
@@ -21,18 +22,19 @@ import { cn } from '../lib/utils';
 const Sidebar = ({ collapsed, setCollapsed }) => {
   const { user } = useAuth();
   const { visuals } = useVisuals();
+  const { t } = useLanguage();
   const location = useLocation();
 
   const menuItems = [
-    { name: 'Main Feed', path: '/main-feed', icon: LayoutDashboard, permission: 'Main Feed' },
-    { name: 'Authorization', path: '/authorization', icon: Users, permission: 'Authorization', adminOnly: true },
-    { name: 'Profit Table', path: '/profit-table', icon: DollarSign, permission: 'Profit Table', adminOnly: true },
-    { name: 'Company Create', path: '/company-create', icon: Building2, permission: 'Company Create', adminOnly: true },
-    { name: 'Company Feed', path: '/company-feed', icon: FileText, permission: 'Company Feed' },
-    { name: 'Company Calendar', path: '/company-calendar', icon: Calendar, permission: 'Company Calendar' },
-    { name: 'Shared Calendar', path: '/shared-calendar', icon: CalendarDays, permission: 'Shared Calendar' },
-    { name: 'Payments', path: '/payments', icon: CreditCard, permission: 'Payments' },
-    { name: 'Visuals', path: '/visuals', icon: Palette, permission: 'Visuals', adminOnly: true },
+    { name: t('mainFeed'), path: '/main-feed', icon: LayoutDashboard, permission: 'Main Feed' },
+    { name: t('authorization'), path: '/authorization', icon: Users, permission: 'Authorization', adminOnly: true },
+    { name: t('profitTable'), path: '/profit-table', icon: DollarSign, permission: 'Profit Table', adminOnly: true },
+    { name: t('companyCreate'), path: '/company-create', icon: Building2, permission: 'Company Create', adminOnly: true },
+    { name: t('companyFeed'), path: '/company-feed', icon: FileText, permission: 'Company Feed' },
+    { name: t('companyCalendar'), path: '/company-calendar', icon: Calendar, permission: 'Company Calendar' },
+    { name: t('sharedCalendar'), path: '/shared-calendar', icon: CalendarDays, permission: 'Shared Calendar' },
+    { name: t('payments'), path: '/payments', icon: CreditCard, permission: 'Payments' },
+    { name: t('visuals'), path: '/visuals', icon: Palette, permission: 'Visuals', adminOnly: true },
   ];
 
   const hasPermission = (permission) => {
@@ -96,7 +98,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                data-testid={`sidebar-${item.name.toLowerCase().replace(/\s+/g, '-')}-link`}
+                data-testid={`sidebar-${item.path.replace('/', '')}-link`}
                 className={cn(
                   'flex items-center gap-3 px-3 py-3 mb-1 rounded-lg transition-all duration-200',
                   isActive
