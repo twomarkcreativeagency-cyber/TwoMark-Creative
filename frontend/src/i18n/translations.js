@@ -346,6 +346,18 @@ export const translations = {
     primaryColor: 'Primary Color',
     accentColor: 'Accent Color',
     saveAndApply: 'Save & Apply',
+    
+    // New Additions for AnaAkis Dashboard
+    totalPosts: 'Total Posts',
+    posts: 'Post',
+    firms: 'Firm',
+    pendingPayments: 'Pending Payments',
+    payments: 'Payment',
+    upcomingEvents: 'Upcoming Events',
+    events: 'Event',
+    recentActivity: 'Recent Activity',
+    noRecentActivity: 'No recent activity yet',
+    
     loginSuccess: 'Login successful!',
     postCreated: 'Post created!',
     userCreated: 'User created!',
