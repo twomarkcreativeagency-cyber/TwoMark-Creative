@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -12,6 +13,7 @@ const TopBar = () => {
   const { user, logout } = useAuth();
   const { language, toggleLanguage, t } = useLanguage();
   const { connected } = useWebSocket();
+  const { theme } = useTheme();
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -27,9 +29,23 @@ const TopBar = () => {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <h2 className="text-xl font-bold text-gray-900">
-          {getDashboardTitle()}
-        </h2>
+        {/* Display Logo if available */}
+        {theme?.logo_url && theme.logo_url !== '/uploads/logos/default-logo.png' ? (
+          <img
+            src={process.env.REACT_APP_BACKEND_URL + theme.logo_url}
+            alt="Logo"
+            style={{
+              width: `${theme.logo_width || 150}px`,
+              height: theme.preserve_aspect_ratio ? 'auto' : `${theme.logo_height || 50}px`,
+              maxHeight: '60px',
+            }}
+            className="object-contain"
+          />
+        ) : (
+          <h2 className="text-xl font-bold text-gray-900">
+            {getDashboardTitle()}
+          </h2>
+        )}
         {connected && (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
