@@ -1,86 +1,49 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { VisualsProvider } from '../contexts/VisualsContext';
 import { WebSocketProvider } from '../contexts/WebSocketContext';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
-import MainFeed from './MainFeed';
-import Authorization from './Authorization';
-import ProfitTable from './ProfitTable';
-import CompanyCreate from './CompanyCreate';
-import CompanyFeed from './CompanyFeed';
-import CompanyCalendar from './CompanyCalendar';
-import SharedCalendar from './SharedCalendar';
-import Payments from './Payments';
-import Visuals from './Visuals';
+
+// Import pages
+import AnaAkis from './AnaAkis';
+import Yetkilendirme from './Yetkilendirme';
+import Firmalar from './Firmalar';
+import FirmaAkisi from './FirmaAkisi';
+import FirmaOdemeleri from './FirmaOdemeleri';
+import FirmaTakvimi from './FirmaTakvimi';
+import KazancTablosu from './KazancTablosu';
+import OrtakTakvim from './OrtakTakvim';
+import Gorsellik from './Gorsellik';
+import Ayarlar from './Ayarlar';
 
 const Dashboard = () => {
-  const { user, token } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  const hasPermission = (permission) => {
-    if (!user) return false;
-    if (user.role === 'Admin') return true;
-    return user.permissions?.includes(permission);
-  };
-
   return (
-    <VisualsProvider>
-      <WebSocketProvider token={token}>
-        <div className="flex h-screen bg-slate-50 overflow-hidden">
-          <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+    <WebSocketProvider>
+      <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <Sidebar />
+        
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TopBar />
           
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <TopBar />
-            
-            <main className="flex-1 overflow-auto p-6">
-              <Routes>
-                <Route path="/" element={<Navigate to="/main-feed" replace />} />
-                
-                {hasPermission('Main Feed') && (
-                  <Route path="/main-feed" element={<MainFeed />} />
-                )}
-                
-                {hasPermission('Authorization') && (
-                  <Route path="/authorization" element={<Authorization />} />
-                )}
-                
-                {hasPermission('Profit Table') && (
-                  <Route path="/profit-table" element={<ProfitTable />} />
-                )}
-                
-                {hasPermission('Company Create') && (
-                  <Route path="/company-create" element={<CompanyCreate />} />
-                )}
-                
-                {hasPermission('Company Feed') && (
-                  <Route path="/company-feed" element={<CompanyFeed />} />
-                )}
-                
-                {hasPermission('Company Calendar') && (
-                  <Route path="/company-calendar" element={<CompanyCalendar />} />
-                )}
-                
-                {hasPermission('Shared Calendar') && (
-                  <Route path="/shared-calendar" element={<SharedCalendar />} />
-                )}
-                
-                {hasPermission('Payments') && (
-                  <Route path="/payments" element={<Payments />} />
-                )}
-                
-                {hasPermission('Visuals') && (
-                  <Route path="/visuals" element={<Visuals />} />
-                )}
-                
-                <Route path="*" element={<Navigate to="/main-feed" replace />} />
-              </Routes>
-            </main>
-          </div>
+          <main className="flex-1 overflow-auto p-6">
+            <Routes>
+              <Route path="/" element={<Navigate to="/ana-akis" replace />} />
+              <Route path="/ana-akis" element={<AnaAkis />} />
+              <Route path="/yetkilendirme" element={<Yetkilendirme />} />
+              <Route path="/firmalar" element={<Firmalar />} />
+              <Route path="/firma-akisi" element={<FirmaAkisi />} />
+              <Route path="/firma-odemeleri" element={<FirmaOdemeleri />} />
+              <Route path="/firma-takvimi" element={<FirmaTakvimi />} />
+              <Route path="/kazanc-tablosu" element={<KazancTablosu />} />
+              <Route path="/ortak-takvim" element={<OrtakTakvim />} />
+              <Route path="/gorsellik" element={<Gorsellik />} />
+              <Route path="/ayarlar" element={<Ayarlar />} />
+              <Route path="*" element={<Navigate to="/ana-akis" replace />} />
+            </Routes>
+          </main>
         </div>
-      </WebSocketProvider>
-    </VisualsProvider>
+      </div>
+    </WebSocketProvider>
   );
 };
 
