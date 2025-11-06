@@ -251,30 +251,36 @@ const FirmaTakvimi = () => {
             </div>
 
             <div>
-              <Label>{t('company')}</Label>
-              <Select
-                value={newEvent.assigned_company || 'unassigned'}
-                onValueChange={(value) => {
-                  const company = companies.find((c) => c.id === value);
-                  setNewEvent({
-                    ...newEvent,
-                    assigned_company: value === 'unassigned' ? '' : value,
-                    color_hex: value === 'unassigned' ? '#1CFF00' : (company?.brand_color_hex || '#1CFF00'),
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Firma seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Firma Seçin</SelectItem>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>{t('company')} *</Label>
+              {companies.length === 0 ? (
+                <div className="text-sm text-gray-500 p-2 bg-gray-50 rounded">
+                  Henüz firma bulunmuyor. Önce bir firma ekleyin.
+                </div>
+              ) : (
+                <Select
+                  value={newEvent.assigned_company || 'unassigned'}
+                  onValueChange={(value) => {
+                    const company = companies.find((c) => c.id === value);
+                    setNewEvent({
+                      ...newEvent,
+                      assigned_company: value === 'unassigned' ? '' : value,
+                      color_hex: value === 'unassigned' ? '#1CFF00' : (company?.brand_color_hex || '#1CFF00'),
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Firma seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Firma Seçin</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div>
