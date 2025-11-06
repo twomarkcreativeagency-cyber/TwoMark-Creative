@@ -191,6 +191,7 @@ class CalendarEventCreate(BaseModel):
     end_time: str
     location: Optional[str] = None
     assigned_company: Optional[str] = None
+    assigned_editors: List[str] = []
     type: Literal["personal", "company", "shared"] = "personal"
     color_hex: Optional[str] = None
 
