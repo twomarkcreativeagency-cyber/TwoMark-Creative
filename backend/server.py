@@ -205,6 +205,7 @@ class CalendarEventResponse(BaseModel):
     location: Optional[str] = None
     created_by: str
     assigned_company: Optional[str] = None
+    assigned_editors: List[str] = []
     type: str
     color_hex: Optional[str] = None
     company_name: Optional[str] = None
