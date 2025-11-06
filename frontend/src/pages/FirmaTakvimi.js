@@ -86,15 +86,21 @@ const FirmaTakvimi = () => {
   };
 
   const handleCreateEvent = async () => {
-    if (!newEvent.title || !newEvent.date || !newEvent.start_time || !newEvent.end_time || !newEvent.assigned_company || newEvent.assigned_company === 'unassigned') {
+    // Validate required fields - company must be selected and not 'unassigned'
+    if (!newEvent.title || !newEvent.date || !newEvent.start_time || !newEvent.end_time) {
       toast.error(t('fillAllFields'));
+      return;
+    }
+
+    if (!newEvent.assigned_company || newEvent.assigned_company === 'unassigned') {
+      toast.error('Lütfen bir firma seçin');
       return;
     }
 
     try {
       const eventToSubmit = {
         ...newEvent,
-        assigned_company: newEvent.assigned_company === 'unassigned' ? '' : newEvent.assigned_company,
+        type: 'company',
       };
       await axios.post(`${API_URL}/events`, eventToSubmit);
       toast.success('Etkinlik oluşturuldu!');
@@ -110,7 +116,8 @@ const FirmaTakvimi = () => {
         type: 'company',
         color_hex: '#1CFF00',
       });
-      fetchEvents();
+      // Refresh both events and companies
+      await Promise.all([fetchEvents(), fetchCompanies()]);
     } catch (error) {
       console.error('[FirmaTakvimi] Error creating event:', error);
       toast.error('Etkinlik oluşturulamadı');
