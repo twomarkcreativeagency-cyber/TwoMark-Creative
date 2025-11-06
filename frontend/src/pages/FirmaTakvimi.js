@@ -61,8 +61,10 @@ const FirmaTakvimi = () => {
     try {
       const response = await axios.get(`${API_URL}/companies`);
       setCompanies(response.data);
+      console.log('[FirmaTakvimi] Companies loaded:', response.data.length, 'companies');
     } catch (error) {
       console.error('[FirmaTakvimi] Error fetching companies:', error);
+      toast.error('Firmalar yüklenemedi');
     }
   };
 
