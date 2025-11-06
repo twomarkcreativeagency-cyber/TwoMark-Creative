@@ -15,26 +15,41 @@ const Sidebar = () => {
   const { theme } = useTheme();
   const location = useLocation();
 
-  // Always show sidebar skeleton during load
-  const menuItems = [
-    { name: t('anaAkis'), path: '/ana-akis', icon: LayoutDashboard, roles: ['Yönetici', 'Editör'] },
-    { name: t('yetkilendirme'), path: '/yetkilendirme', icon: Users, roles: ['Yönetici'] },
-    { 
-      name: t('firmalar'), 
-      path: '/firmalar', 
-      icon: Building2, 
-      roles: ['Yönetici'],
-      submenu: [
-        { name: t('firmaAkisi'), path: '/firma-akisi', icon: FileText },
-        { name: t('firmaOdemeleri'), path: '/firma-odemeleri', icon: CreditCard },
-        { name: t('firmaTakvimi'), path: '/firma-takvimi', icon: Calendar },
-      ]
-    },
-    { name: t('kazancTablosu'), path: '/kazanc-tablosu', icon: DollarSign, roles: ['Yönetici'] },
-    { name: t('ortakTakvim'), path: '/ortak-takvim', icon: CalendarDays, roles: ['Yönetici', 'Editör'] },
-    { name: t('gorsellik'), path: '/gorsellik', icon: Palette, roles: ['Yönetici'] },
-    { name: t('ayarlar'), path: '/ayarlar', icon: Settings, roles: ['Yönetici'] },
-  ];
+  // Define menu items with role-based submenu filtering
+  const getMenuItems = () => {
+    const items = [
+      { name: t('anaAkis'), path: '/ana-akis', icon: LayoutDashboard, roles: ['Yönetici', 'Editör'] },
+      { name: t('yetkilendirme'), path: '/yetkilendirme', icon: Users, roles: ['Yönetici'] },
+      { 
+        name: t('firmalar'), 
+        path: '/firmalar', 
+        icon: Building2, 
+        roles: ['Yönetici', 'Editör'],
+        submenu: [
+          { name: t('firmaAkisi'), path: '/firma-akisi', icon: FileText, roles: ['Yönetici', 'Editör'] },
+          { name: t('firmaOdemeleri'), path: '/firma-odemeleri', icon: CreditCard, roles: ['Yönetici'] }, // Admin only
+          { name: t('firmaTakvimi'), path: '/firma-takvimi', icon: Calendar, roles: ['Yönetici', 'Editör'] },
+        ]
+      },
+      { name: t('kazancTablosu'), path: '/kazanc-tablosu', icon: DollarSign, roles: ['Yönetici'] },
+      { name: t('ortakTakvim'), path: '/ortak-takvim', icon: CalendarDays, roles: ['Yönetici', 'Editör'] },
+      { name: t('gorsellik'), path: '/gorsellik', icon: Palette, roles: ['Yönetici'] },
+      { name: t('ayarlar'), path: '/ayarlar', icon: Settings, roles: ['Yönetici', 'Editör'] },
+    ];
+
+    // Filter submenu items based on user role
+    return items.map(item => {
+      if (item.submenu) {
+        return {
+          ...item,
+          submenu: item.submenu.filter(subItem => hasAccess(subItem.roles))
+        };
+      }
+      return item;
+    });
+  };
+
+  const menuItems = getMenuItems();
 
   const hasAccess = (roles) => {
     if (!user) return true; // Show during loading
@@ -101,34 +116,40 @@ const Sidebar = () => {
                     <button
                       onClick={() => setFirmalarExpanded(!firmalarExpanded)}
                       className={cn(
-                        'w-full flex items-center gap-3 px-3 py-3 mb-1 rounded-lg transition-all',
-                        isActive ? 'bg-accent/10 text-accent font-semibold' : 'text-gray-600 hover:bg-gray-100',
+                        'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                        'hover:bg-gray-100 text-gray-700',
+                        isActive && 'bg-accent/10 text-accent',
                         collapsed && 'justify-center'
                       )}
                     >
-                      <Icon className="w-5 h-5 shrink-0" />
+                      <Icon className={cn('w-5 h-5 shrink-0', isActive && 'text-accent')} />
                       {!collapsed && (
                         <>
-                          <span className="flex-1 text-left text-sm">{item.name}</span>
-                          {firmalarExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          <span className="flex-1 text-left">{item.name}</span>
+                          {firmalarExpanded ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
                         </>
                       )}
                     </button>
                     {firmalarExpanded && !collapsed && (
-                      <div className="ml-6 mt-1 space-y-1">
+                      <div className="ml-8 mt-1 space-y-1">
                         {item.submenu.map((subItem) => {
                           const SubIcon = subItem.icon;
-                          const subIsActive = location.pathname === subItem.path;
+                          const isSubActive = location.pathname === subItem.path;
                           return (
                             <Link
                               key={subItem.path}
                               to={subItem.path}
                               className={cn(
-                                'flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm',
-                                subIsActive ? 'bg-accent/10 text-accent font-semibold' : 'text-gray-600 hover:bg-gray-100'
+                                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                                'hover:bg-gray-100 text-gray-600',
+                                isSubActive && 'bg-accent/10 text-accent'
                               )}
                             >
-                              <SubIcon className="w-4 h-4" />
+                              <SubIcon className={cn('w-4 h-4', isSubActive && 'text-accent')} />
                               <span>{subItem.name}</span>
                             </Link>
                           );
@@ -140,13 +161,14 @@ const Sidebar = () => {
                   <Link
                     to={item.path}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-3 mb-1 rounded-lg transition-all',
-                      isActive ? 'bg-accent/10 text-accent font-semibold' : 'text-gray-600 hover:bg-gray-100',
+                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                      'hover:bg-gray-100 text-gray-700',
+                      isActive && 'bg-accent/10 text-accent',
                       collapsed && 'justify-center'
                     )}
                   >
-                    <Icon className="w-5 h-5 shrink-0" />
-                    {!collapsed && <span className="text-sm">{item.name}</span>}
+                    <Icon className={cn('w-5 h-5 shrink-0', isActive && 'text-accent')} />
+                    {!collapsed && <span>{item.name}</span>}
                   </Link>
                 )}
               </div>
@@ -155,28 +177,34 @@ const Sidebar = () => {
         </nav>
       </aside>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <nav className="flex items-center justify-around py-2">
-          {menuItems.slice(0, 5).map((item) => {
-            if (!hasAccess(item.roles)) return null;
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all',
-                  isActive ? 'text-accent' : 'text-gray-600'
-                )}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs">{item.name.split(' ')[0]}</span>
-              </Link>
-            );
-          })}
-        </nav>
+      {/* Mobile Sidebar - Simplified version */}
+      <div className="md:hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden" id="mobile-sidebar-overlay">
+        <aside className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl">
+          <div className="p-4 border-b border-gray-200">
+            <img
+              src={process.env.REACT_APP_BACKEND_URL + theme.logo_url}
+              alt="Logo"
+              style={logoStyle}
+              className="object-contain"
+            />
+          </div>
+          <nav className="py-4 px-2">
+            {menuItems.map((item) => {
+              if (!hasAccess(item.roles)) return null;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
       </div>
     </>
   );
