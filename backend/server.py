@@ -178,6 +178,7 @@ class CalendarEvent(BaseModel):
     location: Optional[str] = None
     created_by: str  # User.id
     assigned_company: Optional[str] = None  # Company.id
+    assigned_editors: List[str] = []  # List of Editor User IDs
     type: Literal["personal", "company", "shared"] = "personal"
     color_hex: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
