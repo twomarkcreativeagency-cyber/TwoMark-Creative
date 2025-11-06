@@ -175,14 +175,14 @@ const ProfitTable = () => {
               <div>
                 <Label>Company (Optional)</Label>
                 <Select
-                  value={newRecord.company_id}
-                  onValueChange={(value) => setNewRecord({ ...newRecord, company_id: value })}
+                  value={newRecord.company_id || 'none'}
+                  onValueChange={(value) => setNewRecord({ ...newRecord, company_id: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select company or leave blank" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {companies.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
@@ -192,7 +192,7 @@ const ProfitTable = () => {
                 </Select>
               </div>
 
-              {!newRecord.company_id && (
+              {(!newRecord.company_id || newRecord.company_id === 'none') && (
                 <div>
                   <Label>Company Name (Free Text)</Label>
                   <Input
