@@ -99,7 +99,8 @@ const FirmaOdemeleri = () => {
         date: new Date().toISOString().split('T')[0],
         notes: '',
       });
-      fetchPayments();
+      // Refresh both payments and companies (in case new company was added)
+      await Promise.all([fetchPayments(), fetchCompanies()]);
     } catch (error) {
       console.error('[FirmaOdemeleri] Error creating payment:', error);
       toast.error('Ödeme oluşturulamadı');
