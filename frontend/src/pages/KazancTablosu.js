@@ -37,9 +37,9 @@ const KazancTablosu = () => {
   // Protect from non-admin access - Profit table is admin-only and private
   if (user && user.role !== 'Yönetici') {
     return (
-      <div className=\"space-y-6\">
-        <Card className=\"p-6\">
-          <p className=\"text-center text-gray-600\">Bu sayfaya erişim yetkiniz yok. Kazanç tablosu sadece yöneticilere özeldir.</p>
+      <div className="space-y-6">
+        <Card className="p-6">
+          <p className="text-center text-gray-600">Bu sayfaya erişim yetkiniz yok. Kazanç tablosu sadece yöneticilere özeldir.</p>
         </Card>
       </div>
     );
