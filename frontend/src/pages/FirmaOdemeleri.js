@@ -36,9 +36,9 @@ const FirmaOdemeleri = () => {
   // Protect from non-admin access
   if (user && user.role !== 'Yönetici') {
     return (
-      <div className=\"space-y-6\">
-        <Card className=\"p-6\">
-          <p className=\"text-center text-gray-600\">Bu sayfaya erişim yetkiniz yok. Sadece yöneticiler ödemeleri görüntüleyebilir.</p>
+      <div className="space-y-6">
+        <Card className="p-6">
+          <p className="text-center text-gray-600">Bu sayfaya erişim yetkiniz yok. Sadece yöneticiler ödemeleri görüntüleyebilir.</p>
         </Card>
       </div>
     );
