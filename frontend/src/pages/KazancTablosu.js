@@ -18,6 +18,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const KazancTablosu = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [records, setRecords] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,17 @@ const KazancTablosu = () => {
     description: '',
     date: new Date().toISOString().split('T')[0],
   });
+
+  // Protect from non-admin access - Profit table is admin-only and private
+  if (user && user.role !== 'Yönetici') {
+    return (
+      <div className=\"space-y-6\">
+        <Card className=\"p-6\">
+          <p className=\"text-center text-gray-600\">Bu sayfaya erişim yetkiniz yok. Kazanç tablosu sadece yöneticilere özeldir.</p>
+        </Card>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchRecords();
