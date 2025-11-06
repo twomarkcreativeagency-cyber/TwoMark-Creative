@@ -65,7 +65,8 @@ const Firmalar = () => {
         brand_color_hex: '#1CFF00',
         contact_info: '',
       });
-      fetchCompanies();
+      // Refresh companies list immediately
+      await fetchCompanies();
     } catch (error) {
       console.error('[Firmalar] Error creating company:', error);
       toast.error(error.response?.data?.detail || 'Firma oluşturulamadı');
