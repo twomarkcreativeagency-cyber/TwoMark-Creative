@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import io from 'socket.io-client';
 import { toast } from 'sonner';
 
 const WebSocketContext = createContext();
@@ -12,48 +11,57 @@ export const useWebSocket = () => {
   return context;
 };
 
-export const WebSocketProvider = ({ children, token }) => {
+export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    try {
+      const wsUrl = process.env.REACT_APP_BACKEND_URL.replace('https', 'wss').replace('http', 'ws') + '/ws';
+      const ws = new WebSocket(wsUrl);
 
-    const wsUrl = process.env.REACT_APP_BACKEND_URL.replace('https', 'wss').replace('http', 'ws');
-    const newSocket = io(wsUrl, {
-      path: '/ws',
-      transports: ['websocket'],
-      auth: { token },
-    });
+      ws.onopen = () => {
+        setConnected(true);
+        console.log('[WebSocket] Connected');
+      };
 
-    newSocket.on('connect', () => {
-      setConnected(true);
-      console.log('WebSocket connected');
-    });
+      ws.onclose = () => {
+        setConnected(false);
+        console.log('[WebSocket] Disconnected');
+      };
 
-    newSocket.on('disconnect', () => {
-      setConnected(false);
-      console.log('WebSocket disconnected');
-    });
+      ws.onerror = (error) => {
+        console.error('[WebSocket] Error:', error);
+      };
 
-    newSocket.on('new_post', (data) => {
-      toast.success('New post published!');
-    });
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[WebSocket] Message:', data);
+          
+          if (data.type === 'new_post') {
+            toast.success('Yeni gönderi yayınlandı!');
+          } else if (data.type === 'new_event') {
+            toast.info('Yeni takvim etkinliği oluşturuldu!');
+          } else if (data.type === 'new_payment') {
+            toast.info('Yeni ödeme oluşturuldu!');
+          } else if (data.type === 'payment_updated') {
+            toast.success('Ödeme güncellendi!');
+          }
+        } catch (error) {
+          console.error('[WebSocket] Parse error:', error);
+        }
+      };
 
-    newSocket.on('new_event', (data) => {
-      toast.info('New calendar event created!');
-    });
+      setSocket(ws);
 
-    newSocket.on('new_payment', (data) => {
-      toast.info('New payment created!');
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.close();
-    };
-  }, [token]);
+      return () => {
+        ws.close();
+      };
+    } catch (error) {
+      console.error('[WebSocket] Connection error:', error);
+    }
+  }, []);
 
   return (
     <WebSocketContext.Provider value={{ socket, connected }}>

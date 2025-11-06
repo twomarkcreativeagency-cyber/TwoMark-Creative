@@ -8,7 +8,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
 };
@@ -31,8 +31,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.get(`${API_URL}/auth/me`);
       setUser(response.data);
+      console.log('[Auth] User fetched:', response.data);
     } catch (error) {
-      console.error('Error fetching user:', error);
+      console.error('[Auth] Error fetching user:', error);
       logout();
     } finally {
       setLoading(false);
@@ -41,21 +42,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, {
-        username,
-        password,
-      });
+      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
       const { access_token, user: userData } = response.data;
       setToken(access_token);
       setUser(userData);
       localStorage.setItem('token', access_token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      console.log('[Auth] Login successful:', userData);
       return { success: true };
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'Login failed',
-      };
+      console.error('[Auth] Login error:', error);
+      return { success: false, error: error.response?.data?.detail || 'Giriş başarısız' };
     }
   };
 
@@ -64,6 +61,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
+    console.log('[Auth] Logged out');
   };
 
   return (
