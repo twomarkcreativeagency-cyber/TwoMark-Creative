@@ -18,6 +18,7 @@ import { Badge } from './ui/badge';
 const TopBar = () => {
   const { user, logout } = useAuth();
   const { connected } = useWebSocket();
+  const { language, toggleLanguage, t } = useLanguage();
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -29,21 +30,39 @@ const TopBar = () => {
       .slice(0, 2);
   };
 
+  const getDashboardTitle = () => {
+    if (user?.role === 'Admin') return t('adminDashboard');
+    if (user?.role === 'Editor') return t('editorDashboard');
+    return t('companyDashboard');
+  };
+
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between" data-testid="top-bar">
       <div className="flex items-center gap-4">
         <h2 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-          {user?.role === 'Admin' ? 'Admin Dashboard' : user?.role === 'Editor' ? 'Editor Dashboard' : 'Company Dashboard'}
+          {getDashboardTitle()}
         </h2>
         {connected && (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-            Live
+            {t('live')}
           </Badge>
         )}
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Language Switcher */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleLanguage}
+          className="flex items-center gap-2 font-semibold"
+          data-testid="language-toggle"
+        >
+          <Languages className="w-4 h-4" />
+          <span>{language === 'tr' ? 'TR' : 'ENG'}</span>
+        </Button>
+
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative" data-testid="notifications-button">
           <Bell className="w-5 h-5 text-slate-600" />
@@ -78,12 +97,12 @@ const TopBar = () => {
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="w-4 h-4 mr-2" />
-              Profile
+              {t('profile')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="text-red-600" data-testid="logout-button">
               <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              {t('logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
