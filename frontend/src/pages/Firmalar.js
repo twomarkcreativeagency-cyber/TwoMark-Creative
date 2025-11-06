@@ -83,6 +83,51 @@ const Firmalar = () => {
     }
   };
 
+  const handleEditClick = (company) => {
+    setEditingCompany(company);
+    setEditCompany({
+      name: company.name,
+      password: '',
+      brand_color_hex: company.brand_color_hex || '#1CFF00',
+      contact_info: company.contact_info || '',
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateCompany = async () => {
+    try {
+      if (!editCompany.name) {
+        toast.error('Firma adı gereklidir');
+        return;
+      }
+
+      const updateData = {
+        name: editCompany.name,
+        brand_color_hex: editCompany.brand_color_hex,
+        contact_info: editCompany.contact_info,
+      };
+
+      // Only include password if it's being changed
+      if (editCompany.password && editCompany.password.trim() !== '') {
+        if (editCompany.password.length < 6) {
+          toast.error('Şifre en az 6 karakter olmalıdır');
+          return;
+        }
+        updateData.password = editCompany.password;
+      }
+
+      await axios.put(`${API_URL}/companies/${editingCompany.id}`, updateData);
+      toast.success('Firma başarıyla güncellendi');
+      setEditDialogOpen(false);
+      setEditingCompany(null);
+      setEditCompany({ name: '', password: '', brand_color_hex: '#1CFF00', contact_info: '' });
+      await fetchCompanies();
+    } catch (error) {
+      console.error('[Firmalar] Error updating company:', error);
+      toast.error(error.response?.data?.detail || 'Firma güncellenemedi');
+    }
+  };
+
   const handleDeleteCompany = async (companyId) => {
     try {
       if (!window.confirm(t('deleteConfirm'))) return;
