@@ -86,7 +86,8 @@ const KazancTablosu = () => {
         description: '',
         date: new Date().toISOString().split('T')[0],
       });
-      fetchRecords();
+      // Refresh both records and companies
+      await Promise.all([fetchRecords(), fetchCompanies()]);
     } catch (error) {
       console.error('[KazancTablosu] Error creating record:', error);
       toast.error('Kayıt oluşturulamadı');
