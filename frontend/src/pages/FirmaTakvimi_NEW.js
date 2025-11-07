@@ -71,7 +71,9 @@ const FirmaTakvimi = () => {
   const fetchEvents = async () => {
     try {
       const response = await axios.get(`${API_URL}/events`);
-      const formattedEvents = response.data.map((event) => ({
+      // Filter to show only company events
+      const companyEvents = response.data.filter(e => e.type === 'company' || e.assigned_company);
+      const formattedEvents = companyEvents.map((event) => ({
         ...event,
         start: new Date(`${event.date}T${event.start_time}`),
         end: new Date(`${event.date}T${event.end_time}`),
@@ -79,7 +81,7 @@ const FirmaTakvimi = () => {
       }));
       setEvents(formattedEvents);
     } catch (error) {
-      console.error('[OrtakTakvim] Error fetching events:', error);
+      console.error('[FirmaTakvimi] Error fetching events:', error);
       toast.error('Etkinlikler yüklenemedi');
     }
   };
