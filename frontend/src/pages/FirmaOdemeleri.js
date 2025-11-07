@@ -544,13 +544,31 @@ const FirmaOdemeleri = () => {
                         </TableCell>
                         {user?.role === 'Yönetici' && (
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleStatus(payment.id, payment.status)}
-                            >
-                              {t('markAsUnpaid')}
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditClick(payment)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleToggleStatus(payment.id, payment.status)}
+                              >
+                                {t('markAsUnpaid')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeletePayment(payment.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
