@@ -24,6 +24,8 @@ const KazancTablosu = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
   const [newRecord, setNewRecord] = useState({
     type: 'gelir',
@@ -32,6 +34,14 @@ const KazancTablosu = () => {
     company_text: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
+  });
+  const [editRecord, setEditRecord] = useState({
+    type: 'gelir',
+    amount: '',
+    company_id: '',
+    company_text: '',
+    description: '',
+    date: '',
   });
 
   // Protect from non-admin access - Profit table is admin-only and private
