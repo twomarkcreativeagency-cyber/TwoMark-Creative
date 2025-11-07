@@ -24,6 +24,8 @@ const FirmaOdemeleri = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
   const [newPayment, setNewPayment] = useState({
     company_id: '',
@@ -31,6 +33,14 @@ const FirmaOdemeleri = () => {
     amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
+  });
+  const [editPayment, setEditPayment] = useState({
+    company_id: '',
+    title: '',
+    amount: '',
+    date: '',
+    notes: '',
+    status: '',
   });
 
   // Protect from non-admin access
