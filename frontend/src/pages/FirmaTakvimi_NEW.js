@@ -21,12 +21,13 @@ import './Calendar.css';
 const localizer = momentLocalizer(moment);
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
-const OrtakTakvim = () => {
+const FirmaTakvimi = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [editors, setEditors] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -42,7 +43,7 @@ const OrtakTakvim = () => {
     location: '',
     assigned_company: '',
     assigned_editors: [],
-    type: 'shared',
+    type: 'company',
     color_hex: '#1CFF00',
   });
   const [editEvent, setEditEvent] = useState({
