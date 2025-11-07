@@ -309,6 +309,93 @@ const KazancTablosu = () => {
         </Dialog>
       </div>
 
+      {/* Edit Record Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kayıt Düzenle</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>{t('type')}</Label>
+              <Select value={editRecord.type} onValueChange={(value) => setEditRecord({ ...editRecord, type: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gelir">{t('gelir')}</SelectItem>
+                  <SelectItem value="gider">{t('gider')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>{t('amount')} (₺)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={editRecord.amount}
+                onChange={(e) => setEditRecord({ ...editRecord, amount: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <Label>{t('companyOptional')}</Label>
+              <Select
+                value={editRecord.company_id || 'none'}
+                onValueChange={(value) => setEditRecord({ ...editRecord, company_id: value === 'none' ? '' : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('select')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('none')}</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(!editRecord.company_id || editRecord.company_id === 'none') && (
+              <div>
+                <Label>Firma Adı (Serbest Metin)</Label>
+                <Input
+                  value={editRecord.company_text}
+                  onChange={(e) => setEditRecord({ ...editRecord, company_text: e.target.value })}
+                  placeholder="Firma adı girin"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label>{t('description')}</Label>
+              <Input
+                value={editRecord.description}
+                onChange={(e) => setEditRecord({ ...editRecord, description: e.target.value })}
+                placeholder="Açıklama"
+              />
+            </div>
+
+            <div>
+              <Label>{t('date')}</Label>
+              <Input
+                type="date"
+                value={editRecord.date}
+                onChange={(e) => setEditRecord({ ...editRecord, date: e.target.value })}
+              />
+            </div>
+
+            <Button onClick={handleUpdateRecord} className="w-full">
+              Güncelle
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Date Filter */}
       <Card>
         <CardContent className="pt-6">
