@@ -129,6 +129,54 @@ const FirmaOdemeleri = () => {
     }
   };
 
+  const handleEditClick = (payment) => {
+    setEditingPayment(payment);
+    setEditPayment({
+      company_id: payment.company_id,
+      title: payment.title,
+      amount: payment.amount.toString(),
+      date: payment.date,
+      notes: payment.notes || '',
+      status: payment.status,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdatePayment = async () => {
+    try {
+      if (!editPayment.company_id || editPayment.company_id === 'unselected' || !editPayment.title || !editPayment.amount || !editPayment.date) {
+        toast.error(t('fillAllFields'));
+        return;
+      }
+
+      await axios.put(`${API_URL}/payments/${editingPayment.id}`, {
+        ...editPayment,
+        amount: parseFloat(editPayment.amount),
+      });
+      
+      toast.success('Ödeme başarıyla güncellendi');
+      setEditDialogOpen(false);
+      setEditingPayment(null);
+      await fetchPayments();
+    } catch (error) {
+      console.error('[FirmaOdemeleri] Error updating payment:', error);
+      toast.error('Ödeme güncellenemedi');
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    try {
+      if (!window.confirm('Bu ödeme kaydını silmek istediğinizden emin misiniz?')) return;
+
+      await axios.delete(`${API_URL}/payments/${paymentId}`);
+      toast.success('Ödeme silindi');
+      await fetchPayments();
+    } catch (error) {
+      console.error('[FirmaOdemeleri] Error deleting payment:', error);
+      toast.error('Ödeme silinemedi');
+    }
+  };
+
   const applyDateFilter = () => {
     fetchPayments();
   };
