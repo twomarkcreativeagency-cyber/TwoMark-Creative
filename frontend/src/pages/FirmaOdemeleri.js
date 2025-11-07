@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
-import { Plus, CreditCard, CheckCircle, Clock } from 'lucide-react';
+import { Plus, CreditCard, CheckCircle, Clock, Edit2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
