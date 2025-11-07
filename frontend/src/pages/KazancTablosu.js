@@ -121,6 +121,55 @@ const KazancTablosu = () => {
     fetchRecords();
   };
 
+  const handleEditClick = (record) => {
+    setEditingRecord(record);
+    setEditRecord({
+      type: record.type,
+      amount: record.amount.toString(),
+      company_id: record.company_id || '',
+      company_text: record.company_text || '',
+      description: record.description,
+      date: record.date,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateRecord = async () => {
+    try {
+      if (!editRecord.amount || !editRecord.description || !editRecord.date) {
+        toast.error(t('fillAllFields'));
+        return;
+      }
+
+      await axios.put(`${API_URL}/profits/${editingRecord.id}`, {
+        ...editRecord,
+        amount: parseFloat(editRecord.amount),
+        company_id: editRecord.company_id === 'none' ? '' : editRecord.company_id,
+      });
+      
+      toast.success('Kayıt başarıyla güncellendi');
+      setEditDialogOpen(false);
+      setEditingRecord(null);
+      await Promise.all([fetchRecords(), fetchCompanies()]);
+    } catch (error) {
+      console.error('[KazancTablosu] Error updating record:', error);
+      toast.error('Kayıt güncellenemedi');
+    }
+  };
+
+  const handleDeleteRecord = async (recordId) => {
+    try {
+      if (!window.confirm('Bu kaydı silmek istediğinizden emin misiniz?')) return;
+
+      await axios.delete(`${API_URL}/profits/${recordId}`);
+      toast.success('Kayıt silindi');
+      await fetchRecords();
+    } catch (error) {
+      console.error('[KazancTablosu] Error deleting record:', error);
+      toast.error('Kayıt silinemedi');
+    }
+  };
+
   const groupByMonth = (records) => {
     const grouped = {};
     records.forEach((record) => {
