@@ -274,6 +274,95 @@ const FirmaOdemeleri = () => {
         )}
       </div>
 
+      {/* Edit Payment Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ödeme Düzenle</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>{t('company')}</Label>
+              <Select
+                value={editPayment.company_id || 'unselected'}
+                onValueChange={(value) => setEditPayment({ ...editPayment, company_id: value === 'unselected' ? '' : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('select')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unselected">{t('select')}</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>{t('paymentTitle')}</Label>
+              <Input
+                value={editPayment.title}
+                onChange={(e) => setEditPayment({ ...editPayment, title: e.target.value })}
+                placeholder="Ödeme başlığı"
+              />
+            </div>
+
+            <div>
+              <Label>{t('amount')} (₺)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={editPayment.amount}
+                onChange={(e) => setEditPayment({ ...editPayment, amount: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <Label>{t('date')}</Label>
+              <Input
+                type="date"
+                value={editPayment.date}
+                onChange={(e) => setEditPayment({ ...editPayment, date: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label>Durum</Label>
+              <Select
+                value={editPayment.status}
+                onValueChange={(value) => setEditPayment({ ...editPayment, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="odenecek">Ödenecek</SelectItem>
+                  <SelectItem value="odendi">Ödendi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>{t('notes')}</Label>
+              <Textarea
+                value={editPayment.notes}
+                onChange={(e) => setEditPayment({ ...editPayment, notes: e.target.value })}
+                rows={3}
+                placeholder="Ek notlar"
+              />
+            </div>
+
+            <Button onClick={handleUpdatePayment} className="w-full">
+              Güncelle
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Date Filter */}
       <Card>
         <CardContent className="pt-6">
