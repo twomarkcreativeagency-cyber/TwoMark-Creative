@@ -341,7 +341,7 @@ const FirmaTakvimi = () => {
       <Card className="p-6">
         <Calendar
           localizer={localizer}
-          events={events}
+          events={selectedCompany === 'all' ? events : events.filter(e => e.assigned_company === selectedCompany)}
           startAccessor="start"
           endAccessor="end"
           style={{ height: 600 }}
