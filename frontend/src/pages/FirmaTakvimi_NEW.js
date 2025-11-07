@@ -297,9 +297,27 @@ const FirmaTakvimi = () => {
 
   return (
     <div className="space-y-6" data-testid="ortak-takvim">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t('ortakTakvimTitle')}</h1>
-        <p className="text-gray-600 mt-1">{t('ortakTakvimSubtitle')}</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">{t('firmaTakvimiTitle')}</h1>
+          <p className="text-gray-600 mt-1">{t('firmaTakvimiSubtitle')}</p>
+        </div>
+
+        <div className="flex gap-3 items-center">
+          <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Firma seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Firmalar</SelectItem>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Calendar Navigation */}
