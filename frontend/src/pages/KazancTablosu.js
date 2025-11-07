@@ -481,6 +481,7 @@ const KazancTablosu = () => {
                     <TableHead>{t('description')}</TableHead>
                     <TableHead>{t('company')}</TableHead>
                     <TableHead className="text-right">{t('amount')}</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -497,6 +498,28 @@ const KazancTablosu = () => {
                       <TableCell>{record.description}</TableCell>
                       <TableCell>{record.company_name || record.company_text || '-'}</TableCell>
                       <TableCell className="text-right font-semibold">₺{record.amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        {user?.role === 'Yönetici' && (
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditClick(record)}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteRecord(record.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
