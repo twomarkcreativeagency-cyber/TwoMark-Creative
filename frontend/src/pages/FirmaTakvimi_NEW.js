@@ -722,4 +722,4 @@ const FirmaTakvimi = () => {
   );
 };
 
-export default OrtakTakvim;
+export default FirmaTakvimi;
