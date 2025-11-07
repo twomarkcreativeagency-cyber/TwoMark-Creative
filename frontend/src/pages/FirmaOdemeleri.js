@@ -476,14 +476,32 @@ const FirmaOdemeleri = () => {
                         <TableCell className="text-right font-semibold">₺{payment.amount.toFixed(2)}</TableCell>
                         {user?.role === 'Yönetici' && (
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-600 border-green-600 hover:bg-green-50"
-                              onClick={() => handleToggleStatus(payment.id, payment.status)}
-                            >
-                              {t('markAsPaid')}
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditClick(payment)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-600 border-green-600 hover:bg-green-50"
+                                onClick={() => handleToggleStatus(payment.id, payment.status)}
+                              >
+                                {t('markAsPaid')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeletePayment(payment.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
