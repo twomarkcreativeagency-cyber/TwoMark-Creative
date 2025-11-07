@@ -218,14 +218,14 @@ const OrtakTakvim = () => {
 
   const handleDeleteEvent = async (eventId) => {
     try {
-      if (!window.confirm('Bu etkinliği silmek istediğinizden emin misiniz?')) return;
+      if (!window.confirm('Bu etkinliği silmek istediğinizden emin misiniz?\n\nNot: Geçmiş tarihli etkinlikler de silinebilir.')) return;
 
       await axios.delete(`${API_URL}/events/${eventId}`);
       toast.success('Etkinlik silindi');
       await fetchEvents();
     } catch (error) {
       console.error('[OrtakTakvim] Error deleting event:', error);
-      toast.error('Etkinlik silinemedi');
+      toast.error(error.response?.data?.detail || 'Etkinlik silinemedi');
     }
   };
 
