@@ -6,7 +6,7 @@ services:
     region: frankfurt
     buildCommand: pip install -r ../requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port 10000
-    rootDir: ./backend
+    rootDir: ./
     envVars:
       - key: PORT
         value: 10000
