@@ -89,14 +89,22 @@ async def get_current_user(authorization: str = Header(None)):
         token = authorization.split(" ")[1]
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
-        user = await db["users"].find_one({"_id": ObjectId(user_id)})
+
+        # 🔧 Hem string hem ObjectId olarak dene
+        user = await db["users"].find_one(
+            {"$or": [{"_id": user_id}, {"_id": ObjectId(user_id)}]}
+        )
+
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+
         user["id"] = str(user["_id"])
         user["role"] = user.get("role", "company")
         return user
+
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+
 
 def require_role(user: dict, allowed: list[str]):
     if user.get("role", "company") not in allowed:
