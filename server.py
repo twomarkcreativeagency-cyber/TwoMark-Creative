@@ -268,6 +268,11 @@ async def test_db_connection():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+# ---- VERSION ----
+@api.get("/_version")
+async def version():
+    return {"version": "crm-backend-v2-2025-11-12"}
+
 # ---- REGISTER ROUTER ----
 app.include_router(api)
 
