@@ -289,3 +289,17 @@ async def shutdown_db_client():
     client.close()
 
 logging.basicConfig(level=logging.INFO)
+@api.get("/debug/test-insert")
+async def test_insert():
+    try:
+        _id = ObjectId()
+        test_doc = {
+            "_id": _id,
+            "collection": "debug_test",
+            "insert_check": True,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        await db["debug_test"].insert_one(test_doc)
+        return {"status": "ok", "inserted_id": str(_id)}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
