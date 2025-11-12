@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Body
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Body, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -109,6 +109,22 @@ async def login_route(username: str = Body(...), password: str = Body(...)):
     
     token = create_access_token({"sub": str(user["_id"])})
     return {"access_token": token, "user": {"username": user["username"], "id": str(user["_id"])}}
+
+# AUTH/ME ROUTE
+@api_router.get("/auth/me")
+async def get_me(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing token")
+    try:
+        token = authorization.split(" ")[1]
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        user = await users_collection.find_one({"_id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"username": user["username"], "id": str(user["_id"])}
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 # SAMPLE ADMIN USER
 @api_router.get("/create-sample-user")
