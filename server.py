@@ -386,3 +386,10 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+@app.get("/api/debug/test-db")
+async def test_db_connection():
+    try:
+        collections = await db.list_collection_names()
+        return {"status": "ok", "collections": collections}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
