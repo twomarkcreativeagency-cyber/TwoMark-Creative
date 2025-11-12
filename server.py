@@ -27,10 +27,13 @@ db = client[DB_NAME]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# CORS
+# CORS - Frontend domainlerini buraya ekledik
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://brown-wolverine-965096.hostingersite.com",
+        "https://crm.twomarkcreative.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
