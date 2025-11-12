@@ -86,7 +86,6 @@ async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
     return f"/uploads/{directory}/{unique_filename}"
 
 # ROUTES
-
 @api_router.get("/ping")
 async def ping():
     return {"message": "pong"}
@@ -108,7 +107,7 @@ async def login_route(username: str = Body(...), password: str = Body(...)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     token = create_access_token({"sub": str(user["_id"])})
-    return {"access_token": token, "user": {"username": user["username"], "id": str(user["_id"])}}
+    return {"access_token": token, "user": {"username": user["username"], "id": str(user["_id"]), "role": user.get("role", "company")}}
 
 # AUTH/ME ROUTE
 @api_router.get("/auth/me")
@@ -122,7 +121,7 @@ async def get_me(authorization: str = Header(None)):
         user = await users_collection.find_one({"_id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return {"username": user["username"], "id": str(user["_id"])}
+        return {"username": user["username"], "id": str(user["_id"]), "role": user.get("role", "company")}
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -137,7 +136,8 @@ async def create_sample_user():
     result = await users_collection.insert_one({
         "_id": str(ObjectId()),
         "username": "admin",
-        "password": hashed_pw
+        "password": hashed_pw,
+        "role": "administration"   # Artık admin rolü
     })
     return {"status": "ok", "message": "Admin user created", "id": result.inserted_id}
 
