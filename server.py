@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Body
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -83,17 +83,32 @@ async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
 
     return f"/uploads/{directory}/{unique_filename}"
 
-# TEST ROUTES
+# ROUTES
+
+# TEST ROUTE
 @api_router.get("/ping")
 async def ping():
     return {"message": "pong"}
 
+# UPLOAD ROUTE
 @api_router.post("/upload/{folder}")
 async def upload_file(folder: str, file: UploadFile = File(...)):
     if folder not in UPLOAD_DIRS:
         raise HTTPException(status_code=400, detail="Invalid folder")
     url = await save_upload_file(file, folder)
     return {"url": url}
+
+# LOGIN ROUTE
+users_collection = db["users"]  # MongoDB collection
+
+@api_router.post("/auth/login")
+async def login_route(username: str = Body(...), password: str = Body(...)):
+    user = await users_collection.find_one({"username": username})
+    if not user or not verify_password(password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token({"sub": str(user["_id"])})
+    return {"access_token": token, "user": {"username": user["username"], "id": str(user["_id"])}}
 
 # INCLUDE ROUTER
 app.include_router(api_router)
