@@ -15,10 +15,16 @@ from bson import ObjectId
 # =========================
 ROOT_DIR = Path(__file__).parent
 
-MONGO_URL = "mongodb+srv://twomarkCRM:Two2.Mark2Tt@twomarkcreativecrm.gdztghj.mongodb.net/?retryWrites=true&w=majority"
-DB_NAME   = "twomarkcrm"
+# 🔧 MONGO URL tam formatta (veritabanı sonuna /twomarkcrm eklendi)
+MONGO_URL = "mongodb+srv://twomarkCRM:Two2.Mark2Tt@twomarkcreativecrm.gdztghj.mongodb.net/twomarkcrm?retryWrites=true&w=majority"
+DB_NAME = "twomarkcrm"
 
-client = AsyncIOMotorClient(MONGO_URL)
+# 🔧 TLS izinli bağlantı (Render ortamında sertifika sorunlarını önler)
+client = AsyncIOMotorClient(
+    MONGO_URL,
+    tls=True,
+    tlsAllowInvalidCertificates=True
+)
 db = client[DB_NAME]
 
 JWT_SECRET_KEY = "twomark-creative-secret-key-2025"
@@ -90,11 +96,9 @@ async def get_current_user(authorization: str = Header(None)):
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
 
-        # 🔧 Hem string hem ObjectId olarak dene
         user = await db["users"].find_one(
             {"$or": [{"_id": user_id}, {"_id": ObjectId(user_id)}]}
         )
-
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -104,7 +108,6 @@ async def get_current_user(authorization: str = Header(None)):
 
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
-
 
 def require_role(user: dict, allowed: list[str]):
     if user.get("role", "company") not in allowed:
@@ -153,27 +156,7 @@ async def create_sample_user():
     })
     return {"status": "ok", "id": _id}
 
-# ---- USERS ----
-@api.get("/users")
-async def list_users(current=Depends(get_current_user)):
-    require_role(current, ["administration"])
-    cursor = db["users"].find({}, {"password": 0})
-    users = []
-    async for u in cursor:
-        u["id"] = str(u["_id"])
-        users.append(u)
-    return {"items": users, "count": len(users)}
-
 # ---- FIRMS ----
-@api.get("/firms")
-async def list_firms(current=Depends(get_current_user)):
-    firms = []
-    cursor = db["firms"].find({})
-    async for f in cursor:
-        f["id"] = str(f["_id"])
-        firms.append(f)
-    return {"items": firms, "count": len(firms)}
-
 @api.post("/firms/create")
 async def create_firm(
     name: str = Body(...),
@@ -193,80 +176,6 @@ async def create_firm(
     })
     return {"status": "ok", "id": _id}
 
-# ---- EVENTS ----
-@api.get("/events")
-async def list_events(current=Depends(get_current_user)):
-    events = []
-    cursor = db["events"].find({}).sort("date", 1)
-    async for e in cursor:
-        e["id"] = str(e["_id"])
-        events.append(e)
-    return {"items": events, "count": len(events)}
-
-@api.post("/events/create")
-async def create_event(
-    title: str = Body(...),
-    description: str = Body(""),
-    date: str = Body(...),
-    start_time: str = Body("00:00"),
-    end_time: str = Body("00:00"),
-    location: str = Body(""),
-    firm_id: str = Body(None),
-    assigned_editors: list[str] = Body(default=[]),
-    color: str = Body("#1CFF00"),
-    current=Depends(get_current_user)
-):
-    require_role(current, ["administration", "editor"])
-    _id = str(ObjectId())
-    await db["events"].insert_one({
-        "_id": ObjectId(_id),
-        "title": title,
-        "description": description,
-        "date": date,
-        "start_time": start_time,
-        "end_time": end_time,
-        "location": location,
-        "firm_id": firm_id,
-        "assigned_editors": assigned_editors,
-        "color": color,
-        "created_by": current["id"],
-        "created_at": datetime.utcnow().isoformat()
-    })
-    return {"status": "ok", "id": _id}
-
-# ---- STATS ----
-@api.get("/stats")
-async def list_stats(current=Depends(get_current_user)):
-    require_role(current, ["administration"])
-    stats = []
-    cursor = db["stats"].find({}).sort("date", -1)
-    async for s in cursor:
-        s["id"] = str(s["_id"])
-        stats.append(s)
-    return {"items": stats, "count": len(stats)}
-
-# ---- MEDIA ----
-@api.get("/media")
-async def list_media(current=Depends(get_current_user)):
-    media = []
-    cursor = db["media"].find({}).sort("created_at", -1)
-    async for m in cursor:
-        m["id"] = str(m["_id"])
-        media.append(m)
-    return {"items": media, "count": len(media)}
-
-@api.post("/media/upload")
-async def media_upload(file: UploadFile = File(...), current=Depends(get_current_user)):
-    url = await save_upload_file(file, "media")
-    _id = str(ObjectId())
-    await db["media"].insert_one({
-        "_id": ObjectId(_id),
-        "url": url,
-        "uploaded_by": current["id"],
-        "created_at": datetime.utcnow().isoformat()
-    })
-    return {"status": "ok", "id": _id, "url": url}
-
 # ---- DEBUG ----
 @api.get("/debug/test-db")
 async def test_db_connection():
@@ -276,19 +185,6 @@ async def test_db_connection():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# ---- VERSION ----
-@api.get("/_version")
-async def version():
-    return {"version": "crm-backend-v2-2025-11-12"}
-
-# ---- REGISTER ROUTER ----
-app.include_router(api)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-
-logging.basicConfig(level=logging.INFO)
 @api.get("/debug/test-insert")
 async def test_insert():
     try:
@@ -299,7 +195,23 @@ async def test_insert():
             "insert_check": True,
             "created_at": datetime.utcnow().isoformat(),
         }
-        await db["debug_test"].insert_one(test_doc)
-        return {"status": "ok", "inserted_id": str(_id)}
+        result = await db["debug_test"].insert_one(test_doc)
+        print("✅ Insert Result:", result.inserted_id)
+        return {"status": "ok", "inserted_id": str(result.inserted_id)}
     except Exception as e:
+        print("❌ Insert Error:", e)
         return {"status": "error", "message": str(e)}
+
+# ---- VERSION ----
+@api.get("/_version")
+async def version():
+    return {"version": "crm-backend-v3", "timestamp": datetime.utcnow().isoformat()}
+
+# ---- REGISTER ROUTER ----
+app.include_router(api)
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
+
+logging.basicConfig(level=logging.INFO)
