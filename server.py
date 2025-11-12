@@ -3,23 +3,20 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pathlib import Path
-import os, uuid, bcrypt, logging
+import uuid, bcrypt, logging
 from datetime import datetime, timezone, timedelta
 from jose import jwt
 from PIL import Image
 import aiofiles
+from bson import ObjectId
 
 # ROOT DIR
 ROOT_DIR = Path(__file__).parent
 
-# ENV VARIABLES
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-DB_NAME = os.environ.get("DB_NAME", "mydb")
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "twomark-creative-secret-key-2025")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+# DATABASE
+MONGO_URL = "mongodb+srv://twomarkCRM:Two2.Mark2Tt@twomarkcreativecrm.gdztghj.mongodb.net/?retryWrites=true&w=majority"
+DB_NAME = "twomarkcrm"
 
-# MONGO CLIENT
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 
@@ -27,7 +24,7 @@ db = client[DB_NAME]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# CORS - Frontend domainlerini buraya ekledik
+# CORS - Frontend domainleri
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -46,6 +43,11 @@ for d in UPLOAD_DIRS:
     path.mkdir(parents=True, exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=ROOT_DIR / "uploads"), name="uploads")
+
+# JWT CONFIG
+JWT_SECRET_KEY = "twomark-creative-secret-key-2025"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 # UTILITIES
 def hash_password(password: str) -> str:
@@ -85,12 +87,10 @@ async def save_upload_file(upload_file: UploadFile, directory: str) -> str:
 
 # ROUTES
 
-# TEST ROUTE
 @api_router.get("/ping")
 async def ping():
     return {"message": "pong"}
 
-# UPLOAD ROUTE
 @api_router.post("/upload/{folder}")
 async def upload_file(folder: str, file: UploadFile = File(...)):
     if folder not in UPLOAD_DIRS:
@@ -99,7 +99,7 @@ async def upload_file(folder: str, file: UploadFile = File(...)):
     return {"url": url}
 
 # LOGIN ROUTE
-users_collection = db["users"]  # MongoDB collection
+users_collection = db["users"]
 
 @api_router.post("/auth/login")
 async def login_route(username: str = Body(...), password: str = Body(...)):
@@ -109,6 +109,21 @@ async def login_route(username: str = Body(...), password: str = Body(...)):
     
     token = create_access_token({"sub": str(user["_id"])})
     return {"access_token": token, "user": {"username": user["username"], "id": str(user["_id"])}}
+
+# SAMPLE ADMIN USER
+@api_router.get("/create-sample-user")
+async def create_sample_user():
+    existing = await users_collection.find_one({"username": "admin"})
+    if existing:
+        return {"status": "exists", "message": "Admin user already exists"}
+
+    hashed_pw = hash_password("admin123")
+    result = await users_collection.insert_one({
+        "_id": str(ObjectId()),
+        "username": "admin",
+        "password": hashed_pw
+    })
+    return {"status": "ok", "message": "Admin user created", "id": result.inserted_id}
 
 # INCLUDE ROUTER
 app.include_router(api_router)
