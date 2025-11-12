@@ -27,3 +27,7 @@ oauthlib==3.3.1
 # Optional Utilities
 rich==14.2.0
 typing-inspection==0.4.2
+
+#Flask
+flask-cors
+
